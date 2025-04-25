@@ -1,9 +1,10 @@
 #pragma once
+
 #include <stdexcept>
 #include <complex>
 #include "curve.hpp"
 
-namespace point_cloud_accumulator_pkg 
+namespace point_cloud_accumulator_pkg::curves
 {
 
   class LogisticSigmoid : public Curve
@@ -18,8 +19,13 @@ namespace point_cloud_accumulator_pkg
       , ymax_(ymax)
       , steepness_(steepness)
       {
+
+        if (thr2 <= thr1)
+          throw std::invalid_argument("thr2 must be > thr1");
+        
         if (steepness <= 0.0) 
           throw std::invalid_argument("Steepness factor must be greater than zero.");
+
       }
 
       double f(size_t x) const override 

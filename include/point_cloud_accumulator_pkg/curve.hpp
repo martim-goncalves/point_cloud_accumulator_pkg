@@ -1,4 +1,5 @@
 #pragma once
+
 #include <cstddef>
 
 namespace point_cloud_accumulator_pkg
