@@ -15,7 +15,6 @@ namespace point_cloud_accumulator_pkg
 
   class Accumulator
   {
-
     public:
       using FilterPtr = std::shared_ptr<Filter>;
       using VoxelScalerPtr = std::shared_ptr<VoxelScaler>;
@@ -30,7 +29,6 @@ namespace point_cloud_accumulator_pkg
       FilterPtr filter_out_;
       VoxelScalerPtr scaler_;
       double voxel_size_m_;
-
   };
 
 } // namespace point_cloud_accumulator_pkg
