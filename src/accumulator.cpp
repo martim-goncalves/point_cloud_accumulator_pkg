@@ -14,8 +14,8 @@ namespace point_cloud_accumulator_pkg
     , scaler_(std::move(scaler))
   {
 
-    if (!(in && out))
-      throw std::invalid_argument("The filter pipelines must not be null.");
+    // if (!(in && out))
+    //   throw std::invalid_argument("The filter pipelines must not be null.");
 
     accumulated_cloud_ = std::make_shared<CloudT>();
 
@@ -32,12 +32,13 @@ namespace point_cloud_accumulator_pkg
     auto filtered_frame = filter_in_->apply(cloud);
 
     // Accumulate and downsample the cloud.
-    // TODO Complete and consider how to integrate octree data structure with spatial and temporal filters.
     *accumulated_cloud_ += *filtered_frame;
-    voxel_size_m_ = scaler_->getVoxelSize(accumulated_cloud_->size());
+    auto downsampled_cloud = filter_out_->apply(accumulated_cloud_);
+    voxel_size_m_ = scaler_->getVoxelSize(downsampled_cloud->size());
 
     // Return intermediate filtered frame for publishing, visualization, etc.
     return filtered_frame;
+
   }
 
   CloudPtr Accumulator::getAccumulatedCloud() const

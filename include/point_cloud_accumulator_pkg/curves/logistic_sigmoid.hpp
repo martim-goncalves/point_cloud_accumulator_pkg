@@ -13,7 +13,6 @@ namespace point_cloud_accumulator_pkg::curves
       double f(size_t x) const override;
 
     private:
-
       size_t thr1_, thr2_;
       double ymin_, ymax_, steepness_;
 

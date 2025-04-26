@@ -11,7 +11,7 @@ namespace point_cloud_accumulator_pkg::filters
   {
 
     public:
-      TFOutlierFilter(double max_trans_m = 0.3, double max_rot_deg = 15.0, uint8_t history_size = 5);
+      TFOutlierFilter(double max_translation_m = 0.3, double max_rotation_deg = 15.0, uint8_t history_size = 5);
       void setCurrentTransform(const Eigen::Affine3f& tf);
 
     protected:
@@ -19,7 +19,7 @@ namespace point_cloud_accumulator_pkg::filters
 
     private:
       bool isValid(const Eigen::Affine3f& tf) const;
-      double getRotAngleDeg(const Eigen::Matrix3f& a, const Eigen::Matrix3f& b) const;
+      double getRotationAngleDeg(const Eigen::Matrix3f& a, const Eigen::Matrix3f& b) const;
 
   };
 
