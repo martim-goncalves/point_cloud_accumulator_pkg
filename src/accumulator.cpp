@@ -8,33 +8,30 @@ namespace point_cloud_accumulator_pkg
 {
 
   Accumulator::Accumulator(double voxel_size_m, FilterPtr in, FilterPtr out, VoxelScalerPtr scaler)
-    : voxel_size_m_(voxel_size_m)
+    : voxel_size_m_(voxel_size_m) // FIXME
     , filter_in_(std::move(in))
     , filter_out_(std::move(out))
-    , scaler_(std::move(scaler))
+    , scaler_(std::move(scaler)) // FIXME Remove scaler; inject into downsampling filter
   {
-
-    // if (!(in && out))
-    //   throw std::invalid_argument("The filter pipelines must not be null.");
 
     accumulated_cloud_ = std::make_shared<CloudT>();
 
   }
 
-  CloudPtr Accumulator::ingest(const CloudPtr& cloud)
+  CloudPtr Accumulator::ingest(const CloudPtr &cloud)
   {
 
     // Protect against silliness.
     if (!cloud)
       throw std::invalid_argument("Input cloud must not be null.");
 
-    // Apply input filter to ingested frame.
-    auto filtered_frame = filter_in_->apply(cloud);
+    // Apply input filter pipeline to ingested frame if available.
+    auto filtered_frame = (filter_in_) ? filter_in_->apply(cloud) : cloud;
 
     // Accumulate and downsample the cloud.
     *accumulated_cloud_ += *filtered_frame;
-    auto downsampled_cloud = filter_out_->apply(accumulated_cloud_);
-    voxel_size_m_ = scaler_->getVoxelSize(downsampled_cloud->size());
+    accumulated_cloud_ = (filter_out_) ? filter_out_->apply(accumulated_cloud_) : accumulated_cloud_;
+    voxel_size_m_ = scaler_->getVoxelSize(accumulated_cloud_->size());
 
     // Return intermediate filtered frame for publishing, visualization, etc.
     return filtered_frame;
@@ -46,7 +43,7 @@ namespace point_cloud_accumulator_pkg
     return accumulated_cloud_;
   }
 
-  double Accumulator::getVoxelSize() const
+  double Accumulator::getVoxelSize() const // FIXME 
   {
     return voxel_size_m_;
   }
