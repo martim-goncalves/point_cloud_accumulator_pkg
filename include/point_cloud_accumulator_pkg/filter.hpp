@@ -31,7 +31,7 @@ namespace point_cloud_accumulator_pkg
        * @brief Applies the filter to a point cloud.
        * @param cloud A point cloud frame.
        */
-      CloudPtr apply(CloudPtr cloud) 
+      CloudPtr apply(const CloudPtr& cloud) 
       {
         CloudPtr filtered_cloud = applyFilter(cloud);
         if (next_)
@@ -48,7 +48,7 @@ namespace point_cloud_accumulator_pkg
        * 
        * Filter specializations should implement this method to customize processing behavior.
        */
-      virtual CloudPtr applyFilter(CloudPtr cloud) const = 0;
+      virtual CloudPtr applyFilter(const CloudPtr& cloud) const = 0;
 
     private:
 

@@ -1,4 +1,6 @@
 #include <stdexcept>
+#include <complex>
+
 #include "point_cloud_accumulator_pkg/curves/logistic_sigmoid.hpp"
 
 namespace point_cloud_accumulator_pkg::curves
