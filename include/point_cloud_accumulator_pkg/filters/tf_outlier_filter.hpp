@@ -10,16 +10,16 @@ namespace point_cloud_accumulator_pkg::filters
   class TFOutlierFilter : public Filter
   {
 
-  public:
-    TFOutlierFilter(double max_trans_m = 0.3, double max_rot_deg = 15.0, uint8_t history_size = 5);
-    void setCurrentTransform(const Eigen::Affine3f& tf);
+    public:
+      TFOutlierFilter(double max_trans_m = 0.3, double max_rot_deg = 15.0, uint8_t history_size = 5);
+      void setCurrentTransform(const Eigen::Affine3f& tf);
 
-  protected:
-    CloudPtr applyFilter(const CloudPtr& cloud) const = 0;
+    protected:
+      CloudPtr applyFilter(const CloudPtr& cloud) const = 0;
 
-  private:
-    bool isValid(const Eigen::Affine3f& tf) const;
-    double getRotAngleDeg(const Eigen::Matrix3f& a, const Eigen::Matrix3f& b) const;
+    private:
+      bool isValid(const Eigen::Affine3f& tf) const;
+      double getRotAngleDeg(const Eigen::Matrix3f& a, const Eigen::Matrix3f& b) const;
 
   };
 
