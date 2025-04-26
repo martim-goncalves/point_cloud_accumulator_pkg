@@ -4,6 +4,8 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
+#include "filter.hpp"
+
 using PointT = pcl::PointXYZRGB;
 using CloudT = pcl::PointCloud<PointT>;
 using CloudPtr = std::shared_ptr<CloudT>;

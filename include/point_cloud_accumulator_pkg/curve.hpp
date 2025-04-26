@@ -17,4 +17,4 @@ namespace point_cloud_accumulator_pkg
       virtual double f(size_t x) const = 0;
   };
 
-}
+} // namespace point_cloud_accumulator_pkg

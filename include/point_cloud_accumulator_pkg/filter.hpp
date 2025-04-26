@@ -57,4 +57,4 @@ namespace point_cloud_accumulator_pkg
 
   };
 
-}
+} // namespace point_cloud_accumulator_pkg
