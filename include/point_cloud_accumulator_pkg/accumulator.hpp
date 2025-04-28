@@ -26,9 +26,9 @@ namespace point_cloud_accumulator_pkg
     private:
       CloudPtr accumulated_cloud_;
       FilterPtr filter_in_;
-      FilterPtr filter_out_;
-      VoxelScalerPtr scaler_; // FIXME Remove scaler; inject into downsampling filter
-      double voxel_size_m_; // FIXME 
+      FilterPtr filter_out_; // TODO Change of plans: create a private method for downsampling instead
+      VoxelScalerPtr scaler_;
+      double voxel_size_m_;
   };
 
 } // namespace point_cloud_accumulator_pkg
