@@ -24,8 +24,16 @@ namespace point_cloud_accumulator_pkg
 
       virtual ~Filter() = default;
 
-      /** Sets the successor (next filter) in the processing pipeline.  */
-      void setNext(FilterPtr filter) { next_ = filter; }
+      /** 
+       * @brief Sets the successor (next filter) in the processing pipeline. Supports method chainning. 
+       * @param 
+       * @return The filter set as a successor in the pipeline.
+       * */
+      FilterPtr setNext(FilterPtr filter) 
+      { 
+        next_ = filter; 
+        return next_;
+      }
 
       /**
        * @brief Applies the filter to a point cloud.

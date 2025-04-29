@@ -8,7 +8,6 @@ using PointT = pcl::PointXYZRGB;
 using CloudT = pcl::PointCloud<PointT>;
 using CloudPtr = std::shared_ptr<CloudT>;
 
-
 // [NOTE] :: Forward declarations speed compilation up. Use them when headers don't need to be included. 
 class Filter;
 class VoxelScaler;
