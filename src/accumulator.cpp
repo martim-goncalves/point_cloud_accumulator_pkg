@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <pcl/filters/voxel_grid.h>
 
 #include "point_cloud_accumulator_pkg/filter.hpp"
 #include "point_cloud_accumulator_pkg/accumulator.hpp"
@@ -7,10 +8,9 @@
 namespace point_cloud_accumulator_pkg
 {
 
-  Accumulator::Accumulator(double voxel_size_m, FilterPtr in, FilterPtr out, VoxelScalerPtr scaler)
+  Accumulator::Accumulator(double voxel_size_m, FilterPtr pipeline, VoxelScalerPtr scaler)
     : voxel_size_m_(voxel_size_m)
-    , filter_in_(std::move(in))
-    , filter_out_(std::move(out)) // TODO Change of plans: create a private method for downsampling instead
+    , pipeline_(std::move(pipeline))
     , scaler_(std::move(scaler))
   {
 
@@ -26,11 +26,11 @@ namespace point_cloud_accumulator_pkg
       throw std::invalid_argument("Input cloud must not be null.");
 
     // Apply input filter pipeline to ingested frame if available.
-    auto filtered_frame = (filter_in_) ? filter_in_->apply(cloud) : cloud;
+    auto filtered_frame = (pipeline_) ? pipeline_->apply(cloud) : cloud;
 
     // Accumulate and downsample the cloud.
     *accumulated_cloud_ += *filtered_frame;
-    accumulated_cloud_ = (filter_out_) ? filter_out_->apply(accumulated_cloud_) : accumulated_cloud_;
+    downsample(accumulated_cloud_);
     voxel_size_m_ = scaler_->getVoxelSize(accumulated_cloud_->size());
 
     // Return intermediate filtered frame for publishing, visualization, etc.
@@ -46,6 +46,16 @@ namespace point_cloud_accumulator_pkg
   double Accumulator::getVoxelSize() const
   {
     return voxel_size_m_;
+  }
+
+  void Accumulator::downsample(CloudPtr &cloud)
+  {
+    auto downsampled_cloud = std::make_shared<CloudT>();
+    pcl::VoxelGrid<pcl::PointXYZRGB> voxgrid;
+    voxgrid.setInputCloud(cloud);
+    voxgrid.setLeafSize(voxel_size_m_, voxel_size_m_, voxel_size_m_);
+    voxgrid.filter(*downsampled_cloud);
+    cloud = downsampled_cloud;
   }
 
 } // namespace point_cloud_accumulator_pkg
