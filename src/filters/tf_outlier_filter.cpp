@@ -33,6 +33,11 @@ namespace point_cloud_accumulator_pkg::filters
   
   }
 
+  /**
+   * @brief Validates if a transform is within the constraints set for the filter.
+   * @param tf The transform being validated.
+   * @return True if the transform is valid.
+   */
   bool TFOutlierFilter::isValid(const Eigen::Affine3f &tf) const
   {
 
