@@ -20,7 +20,7 @@ namespace point_cloud_accumulator_pkg::filters
       bool isValid(const Eigen::Affine3f &tf) const;
       double getRotationAngleDeg(const Eigen::Matrix3f &a, const Eigen::Matrix3f &b) const;
 
-      mutable std::deque<Eigen::Affine3f> tf_history_;
+      mutable std::deque<Eigen::Affine3f> tf_history_; // Standard library containers have automatic memory management
       Eigen::Affine3f current_tf_;
       double max_translation_m_;
       double max_rotation_deg_;

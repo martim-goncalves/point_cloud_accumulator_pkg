@@ -1,0 +1,26 @@
+# config/config.yaml
+# Common parameters for the Point Cloud Accumulator Node
+
+---
+/**:
+
+    ros__parameters:
+
+        min_points_thr: 10000
+        max_points_thr: 100000
+        min_voxel_size_m: 0.025
+        max_voxel_size_m: 0.1 
+        savefolder: "./artifacts/"
+        savefile: "accumulated_cloud"
+        save_interval_seconds: 0
+
+        filters: 
+
+            outlier:
+                num_neighbors: 20
+                std_ratio: 2.0
+
+            transform:
+                max_translation_m: 0.3
+                max_rotation_deg: 15.0
+                history_size: 5
