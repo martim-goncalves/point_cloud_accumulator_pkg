@@ -32,7 +32,6 @@ namespace point_cloud_accumulator_pkg
       FilterPtr pipeline_;
       VoxelScalerPtr scaler_;
       double voxel_size_m_;
-
   };
 
 } // namespace point_cloud_accumulator_pkg
