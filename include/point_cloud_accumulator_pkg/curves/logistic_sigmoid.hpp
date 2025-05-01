@@ -9,7 +9,7 @@ namespace point_cloud_accumulator_pkg::curves
   {
 
     public:
-      LogisticSigmoid(size_t thr1, size_t thr2, double ymin, double ymax, double steepness);
+      LogisticSigmoid(size_t thr1, size_t thr2, double ymin, double ymax, double steepness = 5.0);
       double f(size_t x) const override;
 
     private:

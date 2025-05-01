@@ -6,6 +6,15 @@
 #include <pcl/point_cloud.h>
 #include <pcl_conversions.h>
 
+#include "point_cloud_accumulator_pkg/curves/logistic_sigmoid.hpp"
+#include "point_cloud_accumulator_pkg/voxel_scaler.hpp"
+#include "point_cloud_accumulator_pkg/filters/spatial_filter.hpp"
+#include "point_cloud_accumulator_pkg/filters/statistical_outlier_filter.hpp"
+#include "point_cloud_accumulator_pkg/filters/temporal_filter.hpp"
+#include "point_cloud_accumulator_pkg/filters/tf_outlier_filter.hpp"
+#include "point_cloud_accumulator_pkg/filters/color_consistency_filter.hpp"
+#include "point_cloud_accumulator_pkg/accumulator.hpp"
+
 // Type length would be bizarre without these!
 using PointT = pcl::PointXYZRGB;
 using CloudT = pcl::PointCloud<PointT>;
@@ -21,6 +30,9 @@ namespace point_cloud_accumulator_pkg
   {
 
     public:
+
+      using FilterPtr = std::shared_ptr<Filter>;
+      using AccumulatorPtr = std::unique_ptr<Accumulator>;
 
       PointCloudAccumulatorNode() : Node("point_cloud_accumulator")
         , tf_buffer_(this->get_clock())
@@ -84,11 +96,53 @@ namespace point_cloud_accumulator_pkg
         this->get_parameter("filters.color.saturation_thr", saturation_thr_);
         this->get_parameter("filters.color.history_size", color_history_size_);
 
-        // TODO Processing system initialization
-        // 1. Create a Curve
-        // 2. Create a VoxelScaler
-        // 3. Create a Filter pipeline
-        // 4. Create the Accumulator
+        using namespace point_cloud_accumulator_pkg::filters;
+        using namespace point_cloud_accumulator_pkg::curves;
+
+        // Starting filter in the pipeline
+        pipeline_ = std::make_shared<TFOutlierFilter>(max_translation_m_, max_rotation_deg_, tf_history_size_);
+
+        // Chain filters
+        pipeline_ // TF -> Spatial -> SOR -> Temporal -> Color
+          -> setNext(std::make_shared<SpatialFilter>(dist_thr_m_, min_neighbors_))
+          -> setNext(std::make_shared<StatisticalOutlierFilter>(mean_k_, std_ratio_))
+          -> setNext(std::make_shared<TemporalFilter>(cloud_history_size_, dist_thr_m_, min_appearance_ratio_))
+          -> setNext(std::make_shared<ColorConsistencyFilter>(color_history_size_, saturation_thr_));
+
+        // Create interpolation curve for adaptive voxel size
+        auto curve = std::make_unique<LogisticSigmoid>(
+          min_points_thr_, 
+          max_points_thr_, 
+          min_voxel_size_m_, 
+          max_voxel_size_m_
+        );
+
+        // Create the voxel scaler
+        auto scaler = std::make_shared<VoxelScaler>(
+          min_points_thr_, 
+          max_points_thr_, 
+          min_voxel_size_m_, 
+          max_voxel_size_m_, 
+          std::move(curve)
+        );
+
+        // Inject the filter pipeline and voxel scaler into the point cloud accumulator
+        accumulator_ = std::make_unique<Accumulator>(min_voxel_size_m_, pipeline_, scaler);
+
+        // ...
+        topic_subscription_ = this->create_subscription<CloudMsg>(
+          cloud_in, 10,
+          std::bind(&PointCloudAccumulatorNode::handlePointCloud, this, std::placeholders::_1)
+        );
+
+        // ...
+        frame_publisher_ = this->create_publisher<CloudMsg>(cloud_frame, 10);
+        accumulator_publisher_ = this->create_publisher<CloudMsg>(cloud_out, 10);
+
+        // Create a save timer if periodic saving is enabled
+        if (save_interval_seconds_ > 0) {
+          save_timer_ = setInterval(save_interval_seconds_, [this]() { savePointCloud(); });
+        }
 
       }
 
@@ -160,6 +214,9 @@ namespace point_cloud_accumulator_pkg
       double std_ratio_;
 
       int saturation_thr_, color_history_size_;
+
+      FilterPtr pipeline_;
+      AccumulatorPtr accumulator_;
 
   };
 
