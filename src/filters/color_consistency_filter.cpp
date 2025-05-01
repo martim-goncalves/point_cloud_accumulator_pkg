@@ -3,7 +3,7 @@
 namespace point_cloud_accumulator_pkg::filters
 {
 
-  ColorConsistencyFilter::ColorConsistencyFilter(size_t history_size, uint8_t saturation_threshold) 
+  ColorConsistencyFilter::ColorConsistencyFilter(int history_size, uint8_t saturation_threshold) 
     : history_size_(history_size)
     , saturation_threshold_(saturation_threshold)
   {}

@@ -16,11 +16,19 @@
 
         filters: 
 
-            outlier:
-                num_neighbors: 20
-                std_ratio: 2.0
-
-            transform:
+            transform: # Outlier transform filter parameters
                 max_translation_m: 0.3
                 max_rotation_deg: 15.0
                 history_size: 5
+
+            point: # Spatial or temporal outlier point filter parameters
+                num_neighbors: 20           # SOR 
+                dist_thr_m: 0.02            # Temporal, Spatial
+                min_appearance_ratio: 0.6   # Temporal
+                min_neighbors: 5            # Spatial
+                std_ratio: 2.0              # SOR
+                history_size: 5             # Temporal
+
+            color: # Color consistency filter parameters
+                saturation_thr: 240
+                history_size: 10

@@ -5,7 +5,7 @@
 namespace point_cloud_accumulator_pkg::filters
 {
 
-  TemporalFilter::TemporalFilter(std::size_t history_size, float distance_thr_m, float min_appearance_ratio)
+  TemporalFilter::TemporalFilter(int history_size, float distance_thr_m, float min_appearance_ratio)
     : history_size_(history_size)
     , distance_thr_m_(distance_thr_m)
     , min_appearance_ratio_(min_appearance_ratio)
