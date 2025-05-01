@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <algorithm>
+
 #include "point_cloud_accumulator_pkg/voxel_scaler.hpp"
 
 namespace point_cloud_accumulator_pkg
