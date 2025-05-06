@@ -3,8 +3,9 @@
 namespace point_cloud_accumulator_pkg::filters
 {
 
-  StatisticalOutlierFilter::StatisticalOutlierFilter(int mean_k, double std_ratio)
-    : mean_k_(mean_k)
+  StatisticalOutlierFilter::StatisticalOutlierFilter(const std::string &tag, int mean_k, double std_ratio)
+    : Filter(tag)
+    , mean_k_(mean_k)
     , std_ratio_(std_ratio) 
   {}
   

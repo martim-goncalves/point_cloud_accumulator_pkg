@@ -11,7 +11,7 @@ namespace point_cloud_accumulator_pkg::filters
   class ColorConsistencyFilter : public Filter
   {
     public:
-      ColorConsistencyFilter(int history_size = 10, uint8_t saturation_threshold = 240);
+      ColorConsistencyFilter(const std::string &tag, int history_size = 10, uint8_t saturation_threshold = 240);
 
     protected:
       CloudPtr applyFilter(const CloudPtr &cloud) const override;

@@ -15,7 +15,12 @@ namespace point_cloud_accumulator_pkg::filters
   class TemporalFilter : public Filter
   {
     public:
-      TemporalFilter(int history_size = 5, float distance_thr_m = 0.02f, float min_appearance_ratio = 0.6f);
+      TemporalFilter(
+        const std::string &tag, 
+        int history_size = 5, 
+        float distance_thr_m = 0.02f, 
+        float min_appearance_ratio = 0.6f
+      );
       void setDistanceThreshold(float distance_thr);
 
     protected:

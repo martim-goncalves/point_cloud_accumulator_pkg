@@ -10,7 +10,12 @@ namespace point_cloud_accumulator_pkg::filters
   class TFOutlierFilter : public Filter
   {
     public:
-      TFOutlierFilter(double max_translation_m = 0.3, double max_rotation_deg = 15.0, int history_size = 5);
+      TFOutlierFilter(
+        const std::string &tag, 
+        double max_translation_m = 0.3, 
+        double max_rotation_deg = 15.0, 
+        int history_size = 5
+      );
       void setCurrentTransform(const Eigen::Affine3f &tf);
 
     protected:

@@ -3,8 +3,13 @@
 namespace point_cloud_accumulator_pkg::filters
 {
 
-  TFOutlierFilter::TFOutlierFilter(double max_translation_m, double max_rotation_deg, int history_size)
-    : max_translation_m_(max_translation_m)
+  TFOutlierFilter::TFOutlierFilter(
+    const std::string &tag, 
+    double max_translation_m, 
+    double max_rotation_deg, 
+    int history_size
+  ) : Filter(tag)
+    , max_translation_m_(max_translation_m)
     , max_rotation_deg_(max_rotation_deg)
     , history_size_(history_size)
   {}

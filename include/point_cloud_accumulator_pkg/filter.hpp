@@ -22,6 +22,7 @@ namespace point_cloud_accumulator_pkg
       /** Alias for shared pointers to Filter instances. */
       using FilterPtr = std::shared_ptr<Filter>;
 
+      explicit Filter(const std::string &tag) : tag_(tag) {}
       virtual ~Filter() = default;
 
       /**

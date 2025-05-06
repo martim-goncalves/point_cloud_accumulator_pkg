@@ -3,8 +3,9 @@
 namespace point_cloud_accumulator_pkg::filters
 {
 
-  SpatialFilter::SpatialFilter(float distance_thr_m, int min_neighbors)
-    : distance_thr_m_(distance_thr_m)
+  SpatialFilter::SpatialFilter(const std::string &tag, float distance_thr_m, int min_neighbors)
+    : Filter(tag)
+    , distance_thr_m_(distance_thr_m)
     , min_neighbors_(min_neighbors)
   {}
 

@@ -6,7 +6,7 @@
 namespace point_cloud_accumulator_pkg::io
 {
 
-  Logger& Logger::getInstance()
+  Logger &Logger::get()
   {
     static Logger instance;
     return instance;

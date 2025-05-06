@@ -10,7 +10,7 @@ namespace point_cloud_accumulator_pkg::filters
   class StatisticalOutlierFilter : public Filter
   {
   public:
-    StatisticalOutlierFilter(int mean_k = 20, double std_ratio = 2.0);
+    StatisticalOutlierFilter(const std::string &tag, int mean_k = 20, double std_ratio = 2.0);
 
   protected:
     CloudPtr applyFilter(const CloudPtr &cloud) const override;

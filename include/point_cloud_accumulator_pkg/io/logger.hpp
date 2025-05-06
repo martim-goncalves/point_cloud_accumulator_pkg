@@ -16,7 +16,7 @@ namespace point_cloud_accumulator_pkg::io
        * @brief Create or retrieve an existing Logger instance. 
        * @return Logger instance.
        */
-      static Logger &getInstance();
+      static Logger &get();
       
       /** 
        * @brief Sets the path for the run folder and creates it if missing.

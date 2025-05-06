@@ -14,7 +14,7 @@ namespace point_cloud_accumulator_pkg::filters
   class SpatialFilter : public Filter
   {
     public:
-      SpatialFilter(float distance_thr_m = 0.02f, int min_neighbors = 5);
+      SpatialFilter(const std::string &tag, float distance_thr_m = 0.02f, int min_neighbors = 5);
 
     protected:
       CloudPtr applyFilter(const CloudPtr &cloud) const override;
