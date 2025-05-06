@@ -24,6 +24,15 @@ namespace point_cloud_accumulator_pkg
 
       virtual ~Filter() = default;
 
+      /**
+       * @brief Sets the filter's identification tag.
+       * @param tag The identification tag.
+       */
+      void setTag(std::string tag)
+      {
+        tag_ = tag;
+      }
+
       /** 
        * @brief Sets the successor (next filter) in the processing pipeline. Supports method chainning. 
        * @param 
@@ -59,7 +68,8 @@ namespace point_cloud_accumulator_pkg
       virtual CloudPtr applyFilter(const CloudPtr& cloud) const = 0;
 
     private:
-
+      /** Identification tag. */
+      std::string tag_;
       /** Successor filter in the processing pipeline. */
       FilterPtr next_;
 

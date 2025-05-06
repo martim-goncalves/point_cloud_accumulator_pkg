@@ -5,6 +5,9 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl_conversions.h>
+#include <pcl/io/ply_io.h>
+#include <filesystem>
+#include <logging.hpp>
 
 #include "point_cloud_accumulator_pkg/curves/logistic_sigmoid.hpp"
 #include "point_cloud_accumulator_pkg/voxel_scaler.hpp"
@@ -50,7 +53,7 @@ namespace point_cloud_accumulator_pkg
         this->declare_parameter<double>("min_voxel_size_m", 0.025);             // High resolution.
         this->declare_parameter<double>("max_voxel_size_m", 0.1);               // Low resolution.
         this->declare_parameter<std::string>("savefolder", "./artifacts/");     // Save folder path.
-        this->declare_parameter<std::string>("savefile", "accumulated_cloud");  // Save file name.
+        this->declare_parameter<std::string>("savefile", "accumulated_cloud");  // Run name.
         this->declare_parameter<int>("save_interval_seconds", 0);               // If zero, save on shutdown only.
 
         // Declare outlier transform filter parameters
@@ -139,6 +142,19 @@ namespace point_cloud_accumulator_pkg
         frame_publisher_ = this->create_publisher<CloudMsg>(cloud_frame, 10);
         accumulator_publisher_ = this->create_publisher<CloudMsg>(cloud_out, 10);
 
+        // Setup unique save run folder
+        std::time_t now = std::time(nullptr);
+        char run_buf[100];
+        std::strftime(run_buf, sizeof(run_buf), "%Y%m%d-%H%M%S", std::localtime(&now));
+        std::string run_folder = savefolder_ + savefile_ + "_" + run_buf + "/";
+        try 
+        {
+          std::filesystem::create_directories(run_folder);
+          run_savefolder_ = run_folder;
+        } catch (const std::filesystem::filesystem_error &e) {
+          RCLCPP_ERROR(this->get_logger(), "Failed to create run folder '%s': %s", run_folder.c_str(), e.what());
+        }
+
         // Create a save timer if periodic saving is enabled
         if (save_interval_seconds_ > 0) {
           save_timer_ = setInterval(save_interval_seconds_, [this]() { savePointCloud(); });
@@ -154,9 +170,16 @@ namespace point_cloud_accumulator_pkg
 
     private:
 
+      /**
+       * @brief Instantiate timer to invoke the callback at a set interval.
+       * @param seconds Time interval, in seconds.
+       * @param callback A callback function activated every interval.
+       * @return A pointer to the wall timer.
+       */
       TimerPtr setInterval(size_t seconds, std::function<void()> callback)
       {
-        // TODO Instantiate timer to invoke the callback at the set interval
+        return this->create_wall_timer(
+          std::chrono::seconds(seconds), [callback]() { callback(); });
       }
 
       CloudMsg handlePointCloud(const CloudMsg::SharedPtr &cloud)
@@ -164,10 +187,17 @@ namespace point_cloud_accumulator_pkg
         // TODO Unmarshall message and process frame
       }
 
+      /**
+       * @brief Convert a point cloud to a ROS 2 message and publish it.
+       * @param publisher A pointer to the ROS 2 publisher.
+       * @param cloud The point cloud to publish.
+       * @param stamp The message timestamp. 
+       * @param frame_id The message's frame ID. 
+       */ 
       void publishPointCloud(
         const PublisherPtr &publisher, 
         const CloudT &cloud, 
-        const rclcpp::Time &stamp,
+        const rclcpp::Time &stamp, 
         const std::string &frame_id
       ) {
 
@@ -190,7 +220,34 @@ namespace point_cloud_accumulator_pkg
 
       void savePointCloud()
       {
-        // TODO Implement save to file logic
+        auto cloud = accumulator_->getAccumulatedCloud();
+        if (!cloud || cloud->empty()) {
+          RCLCPP_WARN(this->get_logger(), "No data to save");
+          return;
+        }
+
+        std::time_t now = std::time(nullptr);
+        char time_buf[100];
+        std::strftime(time_buf, sizeof(time_buf), "%Y%m%d-%H%M%S", std::localtime(&now));
+
+        std::string res_mm = std::to_string(int(min_voxel_size_m_ * 1000)) + "mm";
+        std::string acc_pts = std::to_string(cloud->size()) + "pts";
+
+        std::string file_extension = ".ply";
+        size_t dot_pos = savefile_.find_last_of(".");
+        if (dot_pos != std::string::npos) {
+          file_extension = savefile_.substr(dot_pos);
+        }
+        std::string base_name = (dot_pos != std::string::npos) ? savefile_.substr(0, dot_pos) : savefile_;
+
+        std::string final_filename = std::string(time_buf) + "_" + base_name + "_" + res_mm + "_" + acc_pts + file_extension;
+        std::string final_savepath = run_savefolder_ + final_filename;
+
+        if (pcl::io::savePLYFileBinary(final_savepath, *cloud) == 0) {
+          RCLCPP_INFO(this->get_logger(), "Saved accumulated point cloud to %s", final_savepath.c_str());
+        } else {
+          RCLCPP_ERROR(this->get_logger(), "Failed to save point cloud to %s", final_savepath.c_str());
+        }
       }
 
       tf2_ros::Buffer tf_buffer_;
@@ -203,7 +260,7 @@ namespace point_cloud_accumulator_pkg
 
       int64_t min_points_thr_, max_points_thr_;
       double min_voxel_size_m_, max_voxel_size_m_;
-      std::string savefolder_, savefile_;
+      std::string run_savefolder_, savefolder_, savefile_;
       size_t save_interval_seconds_;
 
       double max_translation_m_, max_rotation_deg_;
