@@ -12,7 +12,9 @@ namespace point_cloud_accumulator_pkg::filters
     , max_translation_m_(max_translation_m)
     , max_rotation_deg_(max_rotation_deg)
     , history_size_(history_size)
-  {}
+  {
+    // TODO Log headers: timestamp, elapsed, tx, ty, tz, rx, ry, rz, outlier, max_translation_m, max_rotation_deg, history_size
+  }
 
   void TFOutlierFilter::setCurrentTransform(const Eigen::Affine3f &tf)
   {
@@ -33,6 +35,8 @@ namespace point_cloud_accumulator_pkg::filters
       tf_history_.pop_front();
 
     tf_history_.push_back(current_tf_);
+
+    // TODO Log timestamp, elapsed, tx, ty, tz, rx, ry, rz, outlier, max_translation_m, max_rotation_deg, history_size
 
     return cloud;
   

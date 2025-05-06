@@ -106,6 +106,9 @@ namespace point_cloud_accumulator_pkg
         // Filter tags
         std::string t1 = "tfoutlier", t2 = "spatial", t3 = "sor", t4 = "temporal", t5 = "color";
 
+        // Instantiate the step logger
+        io::Logger::get().setSaveFilePrefix(savefolder_, savefile_);
+
         // Starting filter in the pipeline
         pipeline_ = std::make_shared<TFOutlierFilter>(t1, max_translation_m_, max_rotation_deg_, tf_history_size_);
 
@@ -156,9 +159,6 @@ namespace point_cloud_accumulator_pkg
         if (save_interval_seconds_ > 0) {
           save_timer_ = setInterval(save_interval_seconds_, [this]() { savePointCloud(); });
         }
-
-        // Instantiate the step logger
-        io::Logger::get().setSaveFilePrefix(savefolder_, savefile_);
 
       }
 

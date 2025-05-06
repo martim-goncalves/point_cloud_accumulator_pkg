@@ -7,7 +7,9 @@ namespace point_cloud_accumulator_pkg::filters
     : Filter(tag)
     , distance_thr_m_(distance_thr_m)
     , min_neighbors_(min_neighbors)
-  {}
+  {
+    // TODO Log headers: timestamp, elapsed, total points, points kept, points filtered, mean distance between points, standard deviation, distance_thr_m, min_neighbors
+  }
 
   CloudPtr SpatialFilter::applyFilter(const CloudPtr &cloud) const
   {
@@ -28,6 +30,8 @@ namespace point_cloud_accumulator_pkg::filters
     filtered->width = static_cast<uint32_t>(filtered->points.size());
     filtered->height = 1;
     filtered->is_dense = true;
+
+    // TODO Log timestamp, elapsed, total points, points kept, points filtered, mean distance between points, standard deviation of distance, distance_thr_m, min_neighbors
 
     return filtered;
 

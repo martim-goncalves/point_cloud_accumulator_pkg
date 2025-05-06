@@ -3,6 +3,8 @@
 namespace point_cloud_accumulator_pkg::filters
 {
 
+  // FIXME Brightness should be normalized on the temporal axis for each point, not globally or shadows and bright spots will get eaten up
+
   ColorConsistencyFilter::ColorConsistencyFilter(
     const std::string &tag, 
     int history_size, 
@@ -10,7 +12,9 @@ namespace point_cloud_accumulator_pkg::filters
   ) : Filter(tag)
     , history_size_(history_size)
     , saturation_threshold_(saturation_threshold)
-  {}
+  {
+    // TODO Log headers: timestamp, elapsed, ..., number of overexposed points, saturation_thr, history_size
+  }
 
   CloudPtr ColorConsistencyFilter::applyFilter(const CloudPtr& cloud) const
   {

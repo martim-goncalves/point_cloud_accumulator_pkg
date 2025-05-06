@@ -14,7 +14,9 @@ namespace point_cloud_accumulator_pkg::filters
     , history_size_(history_size)
     , distance_thr_m_(distance_thr_m)
     , min_appearance_ratio_(min_appearance_ratio)
-  {}
+  {
+    // TODO Log headers: timestamp, elapsed, total points, points kept, points filtered, mean distance between points, standard deviation of distance, distance_thr_m, min_appearance_ratio, history_size
+  }
 
   CloudPtr TemporalFilter::applyFilter(const CloudPtr &cloud) const
   {
@@ -44,6 +46,8 @@ namespace point_cloud_accumulator_pkg::filters
     stable_cloud->width = stable_cloud->points.size();
     stable_cloud->height = 1;
     stable_cloud->is_dense = false;
+
+    // TODO Log timestamp, elapsed, total points, points kept, points filtered, mean distance between points, standard deviation of distance, distance_thr_m, min_appearance_ratio, history_size
 
     return stable_cloud;
 
