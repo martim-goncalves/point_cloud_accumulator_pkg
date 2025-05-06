@@ -117,7 +117,8 @@ namespace point_cloud_accumulator_pkg
           -> setNext(std::make_shared<SpatialFilter>(t2, dist_thr_m_, min_neighbors_))
           -> setNext(std::make_shared<StatisticalOutlierFilter>(t3, mean_k_, std_ratio_))
           -> setNext(std::make_shared<TemporalFilter>(t4, cloud_history_size_, dist_thr_m_, min_appearance_ratio_))
-          -> setNext(std::make_shared<ColorConsistencyFilter>(t5, color_history_size_, saturation_thr_));
+          // -> setNext(std::make_shared<ColorConsistencyFilter>(t5, color_history_size_, saturation_thr_))
+        ;
 
         // Create interpolation curve for adaptive voxel size
         auto curve = std::make_unique<LogisticSigmoid>(
