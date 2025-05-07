@@ -1,9 +1,7 @@
 #include <stdexcept>
 #include <pcl/filters/voxel_grid.h>
 
-#include "point_cloud_accumulator_pkg/filter.hpp"
 #include "point_cloud_accumulator_pkg/accumulator.hpp"
-#include "point_cloud_accumulator_pkg/voxel_scaler.hpp"
 
 namespace point_cloud_accumulator_pkg
 {

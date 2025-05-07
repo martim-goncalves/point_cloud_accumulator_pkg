@@ -30,7 +30,20 @@ namespace point_cloud_accumulator_pkg::io
        * @return A TSV record.
        */
       template <typename... Args> 
-      static std::string makeRecord(const Args&... args);
+      static std::string makeRecord(const Args&... args)
+      {
+        std::stringstream ss;
+        size_t n = sizeof...(Args);
+        size_t i = 0;
+        auto append_with_tab = [&](const auto& arg) {
+            ss << toString(arg);
+            if (++i < n) {
+                ss << '\t';
+            }
+        };
+        (append_with_tab(args), ...);
+        return ss.str() + "\n";
+      }
       
       /** 
        * @brief Sets the path for the run folder and creates it if missing.
@@ -57,7 +70,14 @@ namespace point_cloud_accumulator_pkg::io
       ~Logger();
       Logger(const Logger &) = delete;
       Logger &operator=(const Logger &) = delete;
-      template <typename T> std::string toString(const T &value);
+      
+      template <typename T> 
+      static std::string toString(const T &value)
+      {
+        std::stringstream ss;
+        ss << value;
+        return ss.str();
+      }
 
       /** Path to the folder where runs are saved. */
       std::string folder_; 

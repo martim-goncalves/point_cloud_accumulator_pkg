@@ -15,21 +15,6 @@ namespace point_cloud_accumulator_pkg::io
   Logger::Logger() = default;
   Logger::~Logger() = default;
 
-  template <typename... Args>
-  std::string Logger::makeRecord(const Args&... args) {
-    std::stringstream ss;
-    size_t n = sizeof...(Args);
-    size_t i = 0;
-    auto append_with_tab = [&](const auto& arg) {
-        ss << toString(arg);
-        if (++i < n) {
-            ss << '\t';
-        }
-    };
-    (append_with_tab(args), ...);
-    return ss.str() + "\n";
-  }
-
   void Logger::setSaveFilePrefix(const std::string &folder, const std::string &run)
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -78,13 +63,6 @@ namespace point_cloud_accumulator_pkg::io
 
     }
 
-  }
-
-  template <typename T>
-  std::string Logger::toString(const T& value) {
-    std::stringstream ss;
-    ss << value;
-    return ss.str();
   }
 
 } // namespace point_cloud_accumulator_pkg::io

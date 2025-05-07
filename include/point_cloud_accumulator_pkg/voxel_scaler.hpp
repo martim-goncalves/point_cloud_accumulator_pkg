@@ -2,7 +2,8 @@
 
 #include <cstddef>
 #include <memory>
-#include "curve.hpp"
+
+#include "point_cloud_accumulator_pkg/curve.hpp"
 
 namespace point_cloud_accumulator_pkg 
 {

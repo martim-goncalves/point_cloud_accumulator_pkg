@@ -4,13 +4,12 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
+#include "point_cloud_accumulator_pkg/filter.hpp"
+#include "point_cloud_accumulator_pkg/voxel_scaler.hpp"
+
 using PointT = pcl::PointXYZRGB;
 using CloudT = pcl::PointCloud<PointT>;
 using CloudPtr = std::shared_ptr<CloudT>;
-
-// [NOTE] :: Forward declarations speed compilation up. Use them when headers don't need to be included. 
-class Filter;
-class VoxelScaler;
 
 namespace point_cloud_accumulator_pkg
 {

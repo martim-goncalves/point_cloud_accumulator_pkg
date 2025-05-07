@@ -5,10 +5,9 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-#include <pcl_conversions.h>
+#include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/ply_io.h>
 #include <filesystem>
-#include <logging.hpp>
 
 #include "point_cloud_accumulator_pkg/curves/logistic_sigmoid.hpp"
 #include "point_cloud_accumulator_pkg/voxel_scaler.hpp"
@@ -195,7 +194,7 @@ namespace point_cloud_accumulator_pkg
           std::chrono::seconds(seconds), [callback]() { callback(); });
       }
 
-      void handlePointCloud(const CloudMsg::SharedPtr &msg)
+      void handlePointCloud(sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
       {
 
         // Extract point cloud from ROS 2 message
@@ -346,14 +345,14 @@ namespace point_cloud_accumulator_pkg
       AccumulatorPtr accumulator_;
 
   };
-
-  int main(int argc, char const *argv[])
-  {
-    rclcpp::init(argc, argv);
-    auto node = std::make_shared<PointCloudAccumulatorNode>();
-    rclcpp::spin(node);
-    rclcpp::shutdown();
-    return 0;
-  }
   
+}
+
+int main(int argc, char const *argv[])
+{
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<point_cloud_accumulator_pkg::PointCloudAccumulatorNode>();
+  rclcpp::spin(node);
+  rclcpp::shutdown();
+  return 0;
 }
