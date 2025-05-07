@@ -36,3 +36,7 @@ This ROS 2 package is responsible for ingesting point cloud frames and accumulat
 
 ## 5. Usage
 + How to run it (i.e. snippets and such)
+
+```bash
+
+```
