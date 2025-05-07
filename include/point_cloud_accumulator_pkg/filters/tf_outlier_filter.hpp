@@ -2,6 +2,7 @@
 
 #include <deque>
 #include <Eigen/Dense>
+
 #include "point_cloud_accumulator_pkg/filter.hpp"
 
 namespace point_cloud_accumulator_pkg::filters

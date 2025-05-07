@@ -15,6 +15,21 @@ namespace point_cloud_accumulator_pkg::io
   Logger::Logger() = default;
   Logger::~Logger() = default;
 
+  template <typename... Args>
+  std::string Logger::makeRecord(const Args&... args) {
+    std::stringstream ss;
+    size_t n = sizeof...(Args);
+    size_t i = 0;
+    auto append_with_tab = [&](const auto& arg) {
+        ss << toString(arg);
+        if (++i < n) {
+            ss << '\t';
+        }
+    };
+    (append_with_tab(args), ...);
+    return ss.str() + "\n";
+  }
+
   void Logger::setSaveFilePrefix(const std::string &folder, const std::string &run)
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -24,10 +39,10 @@ namespace point_cloud_accumulator_pkg::io
     std::filesystem::create_directories(run_folder);
   }
 
-  void Logger::logStep(const std::string &filter_tag, const std::string &line)
+  void Logger::logStep(const std::string &filter_tag, const std::string &record)
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    logs_[filter_tag].push_back(line);
+    logs_[filter_tag].push_back(record);
   }
 
   void Logger::flush()
@@ -37,11 +52,11 @@ namespace point_cloud_accumulator_pkg::io
     std::lock_guard<std::mutex> lock(mutex_);
 
 		// For each tag-line pair, attempt to flush the logs to a file.
-    for (auto &[tag, lines] : logs_)
+    for (auto &[tag, records] : logs_)
     {
 
 			// [Guard Clause] :: Skip to next if no lines to log for a given tag.
-      if (lines.empty()) continue;
+      if (records.empty()) continue;
 
 			// Build the save destination's file path
 			std::string run_folder = folder_ + "/" + run_;
@@ -53,16 +68,23 @@ namespace point_cloud_accumulator_pkg::io
       if (!out.is_open()) continue;
 
 			// Append each line to the output file.
-      for (const auto &line : lines)
+      for (const auto &record : records)
       {
-        out << line << "\n";
+        out << record;
       }
 
 			// Clear the lines from the Logger.
-      lines.clear();
+      records.clear();
 
     }
 
+  }
+
+  template <typename T>
+  std::string Logger::toString(const T& value) {
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
   }
 
 } // namespace point_cloud_accumulator_pkg::io

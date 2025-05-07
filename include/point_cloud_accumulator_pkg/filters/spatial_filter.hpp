@@ -20,6 +20,9 @@ namespace point_cloud_accumulator_pkg::filters
       CloudPtr applyFilter(const CloudPtr &cloud) const override;
 
     private:
+      std::vector<float> nearestNeighborDistances(const CloudPtr &cloud, int k = 2) const;
+      std::pair<double, double> distanceStats(const std::vector<float> &distances) const;
+
       float distance_thr_m_;
       int min_neighbors_;
   };

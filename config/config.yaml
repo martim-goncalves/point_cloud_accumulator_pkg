@@ -13,6 +13,7 @@
         savefolder: "./artifacts/"
         savefile: "accumulated_cloud"
         save_interval_seconds: 0
+        log_interval_seconds: 30
 
         filters: 
 

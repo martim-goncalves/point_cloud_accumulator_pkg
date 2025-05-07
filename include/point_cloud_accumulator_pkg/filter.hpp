@@ -68,9 +68,10 @@ namespace point_cloud_accumulator_pkg
        */
       virtual CloudPtr applyFilter(const CloudPtr& cloud) const = 0;
 
-    private:
       /** Identification tag. */
       std::string tag_;
+
+    private:
       /** Successor filter in the processing pipeline. */
       FilterPtr next_;
 

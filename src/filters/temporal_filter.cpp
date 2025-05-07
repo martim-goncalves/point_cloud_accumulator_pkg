@@ -1,6 +1,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 
 #include "point_cloud_accumulator_pkg/filters/temporal_filter.hpp"
+#include "point_cloud_accumulator_pkg/io/logger.hpp"
 
 namespace point_cloud_accumulator_pkg::filters
 {
@@ -15,11 +16,24 @@ namespace point_cloud_accumulator_pkg::filters
     , distance_thr_m_(distance_thr_m)
     , min_appearance_ratio_(min_appearance_ratio)
   {
-    // TODO Log headers: timestamp, elapsed, total points, points kept, points filtered, mean distance between points, standard deviation of distance, distance_thr_m, min_appearance_ratio, history_size
+    // Build header for the logs
+    auto& logger = io::Logger::get();
+    logger.logStep(tag, logger.makeRecord(
+      "timestamp", "elapsed",                                   // Time
+      "pts_kept", "pts_filtered",                               // Information
+      "distance_thr_m", "min_appearance_ratio", "history_size"  // Params
+    ));
   }
 
   CloudPtr TemporalFilter::applyFilter(const CloudPtr &cloud) const
   {
+
+    // Set initial timestamp
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+    char time_buf[100];
+    std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now_c));
+    std::string timestamp = time_buf;
 
     // [Guard Clause] :: Skip processing empty clouds
     if (cloud->empty())
@@ -47,7 +61,21 @@ namespace point_cloud_accumulator_pkg::filters
     stable_cloud->height = 1;
     stable_cloud->is_dense = false;
 
-    // TODO Log timestamp, elapsed, total points, points kept, points filtered, mean distance between points, standard deviation of distance, distance_thr_m, min_appearance_ratio, history_size
+    // Get elapsed time in milliseconds
+    auto duration = now.time_since_epoch();
+    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+    // Build record for the current step
+    auto& logger = io::Logger::get();
+    logger.logStep(tag_, logger.makeRecord(
+      timestamp,                              //
+      millis,                                 //
+      stable_cloud->size(),                   // Points kept
+      cloud->size() - stable_cloud->size(),   // Points filtered
+      distance_thr_m_,                        // 
+      min_appearance_ratio_,                  // 
+      history_size_                           // 
+    ));
 
     return stable_cloud;
 

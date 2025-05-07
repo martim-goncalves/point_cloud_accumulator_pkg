@@ -2,6 +2,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl_conversions.h>
@@ -56,6 +57,7 @@ namespace point_cloud_accumulator_pkg
         this->declare_parameter<std::string>("savefolder", "./artifacts/");     // Save folder path.
         this->declare_parameter<std::string>("savefile", "accumulated_cloud");  // Run name.
         this->declare_parameter<int>("save_interval_seconds", 0);               // If zero, save on shutdown only.
+        this->declare_parameter<int>("log_interval_seconds", 30);               // If zero, log on shutdown only.
 
         // Declare outlier transform filter parameters
         this->declare_parameter<double>("filters.transform.max_translation_m", 0.3);
@@ -82,6 +84,7 @@ namespace point_cloud_accumulator_pkg
         this->get_parameter("savefolder", savefolder_);
         this->get_parameter("savefile", savefile_);
         this->get_parameter("save_interval_seconds", save_interval_seconds_);
+        this->get_parameter("log_interval_seconds", log_interval_seconds_);
 
         // Get outlier transform filter parameters
         this->get_parameter("filters.transform.max_translation_m", max_translation_m_);
@@ -143,6 +146,7 @@ namespace point_cloud_accumulator_pkg
         frame_publisher_ = this->create_publisher<CloudMsg>(cloud_frame, 10);
         accumulator_publisher_ = this->create_publisher<CloudMsg>(cloud_out, 10);
 
+        // FIXME Move to before the Logger instantiation and place datetime before savefile name
         // Setup unique save run folder
         std::time_t now = std::time(nullptr);
         char run_buf[100];
@@ -157,15 +161,23 @@ namespace point_cloud_accumulator_pkg
         }
 
         // Create a save timer if periodic saving is enabled
-        if (save_interval_seconds_ > 0) {
-          save_timer_ = setInterval(save_interval_seconds_, [this]() { savePointCloud(); });
-        }
+        if (save_interval_seconds_ > 0)
+          save_timer_ = setInterval(
+            save_interval_seconds_, std::bind(&PointCloudAccumulatorNode::savePointCloud, this)
+          );
+
+        // Create a log timer to keep the RAM from getting exhausted
+        if (log_interval_seconds_ > 0)
+          log_timer_ = setInterval(
+            log_interval_seconds_, std::bind(&PointCloudAccumulatorNode::logRecords, this)
+          );
 
       }
 
       ~PointCloudAccumulatorNode() 
       {
         RCLCPP_INFO(this->get_logger(), "Node shutting down...");
+        logRecords();
         savePointCloud();
       }
 
@@ -183,9 +195,59 @@ namespace point_cloud_accumulator_pkg
           std::chrono::seconds(seconds), [callback]() { callback(); });
       }
 
-      CloudMsg handlePointCloud(const CloudMsg::SharedPtr &cloud)
+      void handlePointCloud(const CloudMsg::SharedPtr &msg)
       {
-        // TODO Unmarshall message and process frame
+
+        // Extract point cloud from ROS 2 message
+        CloudPtr cloud = std::make_shared<CloudT>();
+        pcl::fromROSMsg(*msg, *cloud);
+
+        // Skip empty input early
+        if (cloud->empty()) {
+          RCLCPP_WARN_THROTTLE(
+            this->get_logger(), *this->get_clock(), 5000, 
+            "Received an empty input point cloud, skipping."
+          );
+          return;
+        }
+
+        // Attempt to lookup transform from cloud frame to message frame
+        Eigen::Affine3f tf = Eigen::Affine3f::Identity();
+        try 
+        {
+          geometry_msgs::msg::TransformStamped tf_stamped = tf_buffer_.lookupTransform(
+            "map", 
+            msg->header.frame_id, 
+            msg->header.stamp, 
+            tf2::durationFromSec(0.1)
+          );
+          tf = tf2::transformToEigen(tf_stamped).cast<float>();
+          pipeline_->setCurrentTransform(tf);
+        } catch (const tf2::TransformException &ex) {
+          RCLCPP_WARN_THROTTLE(
+            this->get_logger(), *this->get_clock(), 5000, 
+            "TF lookup failed: %s", ex.what()
+          );
+        }
+
+        // Ingest and filter the cloud
+        CloudPtr filtered = accumulator_->ingest(cloud);
+        CloudPtr accumulated = accumulator_->getAccumulatedCloud();
+
+        // Skip publishing empty frames
+        if (!filtered || filtered->empty()) 
+        {
+          RCLCPP_WARN_THROTTLE(
+            this->get_logger(), *this->get_clock(), 5000, 
+            "Filtered cloud is empty, skipping publish."
+          );
+          return;
+        }
+
+        // Publish filtered and accumulated point clouds
+        publishPointCloud(frame_publisher_, *filtered, msg->header.stamp, "map");
+        publishPointCloud(accumulator_publisher_, *accumulated, msg->header.stamp, "map");
+
       }
 
       /**
@@ -251,6 +313,12 @@ namespace point_cloud_accumulator_pkg
         }
       }
 
+      void logRecords()
+      {
+        io::Logger::get().flush();
+        RCLCPP_INFO(this->get_logger(), "Saved run logs to disk.");
+      }
+
       tf2_ros::Buffer tf_buffer_;
       tf2_ros::TransformListener tf_listener_;
 
@@ -258,11 +326,12 @@ namespace point_cloud_accumulator_pkg
       PublisherPtr frame_publisher_;
       PublisherPtr accumulator_publisher_;
       TimerPtr save_timer_;
+      TimerPtr log_timer_;
 
       int64_t min_points_thr_, max_points_thr_;
       double min_voxel_size_m_, max_voxel_size_m_;
       std::string run_savefolder_, savefolder_, savefile_;
-      size_t save_interval_seconds_;
+      size_t save_interval_seconds_, log_interval_seconds_;
 
       double max_translation_m_, max_rotation_deg_;
       int tf_history_size_;
@@ -273,7 +342,7 @@ namespace point_cloud_accumulator_pkg
 
       int saturation_thr_, color_history_size_;
 
-      FilterPtr pipeline_;
+      std::shared_ptr<filters::TFOutlierFilter> pipeline_;
       AccumulatorPtr accumulator_;
 
   };
