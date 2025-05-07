@@ -38,11 +38,11 @@ namespace point_cloud_accumulator_pkg
       using FilterPtr = std::shared_ptr<Filter>;
       using AccumulatorPtr = std::unique_ptr<Accumulator>;
 
-      PointCloudAccumulatorNode() : Node("point_cloud_accumulator")
+      PointCloudAccumulatorNode() 
+        : Node("point_cloud_accumulator")
         , tf_buffer_(this->get_clock())
         , tf_listener_(tf_buffer_)
       {
-
         // Declare default topic names
         std::string cloud_in = "/cloud_in";
         std::string cloud_frame = "/accumulator/cloud_frame";
@@ -194,7 +194,6 @@ namespace point_cloud_accumulator_pkg
           color_history_size_, saturation_thr_,
           save_interval_seconds_, log_interval_seconds_
         );
-
       }
 
       ~PointCloudAccumulatorNode() 
@@ -220,7 +219,6 @@ namespace point_cloud_accumulator_pkg
 
       void handlePointCloud(sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
       {
-
         // Extract point cloud from ROS 2 message
         CloudPtr cloud = std::make_shared<CloudT>();
         pcl::fromROSMsg(*msg, *cloud);
