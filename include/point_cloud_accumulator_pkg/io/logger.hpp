@@ -46,8 +46,8 @@ namespace point_cloud_accumulator_pkg::io
       }
       
       /** 
-       * @brief Sets the path for the run folder and creates it if missing.
-       * @param folder Path to the runs folder.
+       * @brief Sets the path for the run's artifacts folder and creates it if missing.
+       * @param folder Path to the folder containing the artifacts for a certain run.
        * @param run Name of the folder where the artifacts for a run of the same name are stored.
        */
       void setSaveFilePrefix(const std::string &folder, const std::string &run);
@@ -79,7 +79,7 @@ namespace point_cloud_accumulator_pkg::io
         return ss.str();
       }
 
-      /** Path to the folder where runs are saved. */
+      /** Path to the folder where run artifacts are saved. */
       std::string folder_; 
       /** Name of the folder where artifacts (e.g. maps, logs, etc.) for a run are kept. */
       std::string run_;

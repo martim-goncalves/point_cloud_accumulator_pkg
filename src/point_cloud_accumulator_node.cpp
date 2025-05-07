@@ -102,14 +102,28 @@ namespace point_cloud_accumulator_pkg
         this->get_parameter("filters.color.saturation_thr", saturation_thr_);
         this->get_parameter("filters.color.history_size", color_history_size_);
 
+        // Setup unique save run folder (e.g. ./artifacts/run_name/ where "run_name" is "YMD-HMS_savefile")
+        std::time_t now = std::time(nullptr);
+        char time_buf[100];
+        std::strftime(time_buf, sizeof(time_buf), "%Y%m%d-%H%M%S", std::localtime(&now));
+        std::string run_name = std::string(time_buf) + "_" + savefile_;   // e.g. YMD-HMS_accum_cloud
+        std::string run_folder = savefolder_ + run_name + "/";            // e.g. ./artifacts/run_name/
+        try 
+        {
+          std::filesystem::create_directories(run_folder);
+          run_savefolder_ = run_folder;
+        } catch (const std::filesystem::filesystem_error &e) {
+          RCLCPP_ERROR(this->get_logger(), "Failed to create run folder '%s': %s", run_folder.c_str(), e.what());
+        }
+
+        // Instantiate the step logger
+        io::Logger::get().setSaveFilePrefix(run_folder, run_name);
+
         using namespace point_cloud_accumulator_pkg::filters;
         using namespace point_cloud_accumulator_pkg::curves;
 
         // Filter tags
         std::string t1 = "tfoutlier", t2 = "spatial", t3 = "sor", t4 = "temporal", t5 = "color";
-
-        // Instantiate the step logger
-        io::Logger::get().setSaveFilePrefix(savefolder_, savefile_);
 
         // Starting filter in the pipeline
         pipeline_ = std::make_shared<TFOutlierFilter>(t1, max_translation_m_, max_rotation_deg_, tf_history_size_);
@@ -145,20 +159,6 @@ namespace point_cloud_accumulator_pkg
         frame_publisher_ = this->create_publisher<CloudMsg>(cloud_frame, 10);
         accumulator_publisher_ = this->create_publisher<CloudMsg>(cloud_out, 10);
 
-        // FIXME Move to before the Logger instantiation and place datetime before savefile name
-        // Setup unique save run folder
-        std::time_t now = std::time(nullptr);
-        char run_buf[100];
-        std::strftime(run_buf, sizeof(run_buf), "%Y%m%d-%H%M%S", std::localtime(&now));
-        std::string run_folder = savefolder_ + savefile_ + "_" + run_buf + "/";
-        try 
-        {
-          std::filesystem::create_directories(run_folder);
-          run_savefolder_ = run_folder;
-        } catch (const std::filesystem::filesystem_error &e) {
-          RCLCPP_ERROR(this->get_logger(), "Failed to create run folder '%s': %s", run_folder.c_str(), e.what());
-        }
-
         // Create a save timer if periodic saving is enabled
         if (save_interval_seconds_ > 0)
           save_timer_ = setInterval(
@@ -170,6 +170,30 @@ namespace point_cloud_accumulator_pkg
           log_timer_ = setInterval(
             log_interval_seconds_, std::bind(&PointCloudAccumulatorNode::logRecords, this)
           );
+
+        // Log starting configuration
+        RCLCPP_INFO(this->get_logger(),
+          "[+] PointCloudAccumulatorNode initialized:\n"
+          "\t - Run artifacts folder: %s\n"
+          "\t - Run name: %s\n"
+          "\t - Min/max point threshold: %d / %d\n"
+          "\t - Min/max voxel size: %.4f / %.4f m\n"
+          "\t - TF filter: max_translation = %.2f m, max_rotation = %.2f deg, history = %d\n"
+          "\t - Spatial filter: dist_thr = %.4f m, min_neighbors = %d\n"
+          "\t - SOR filter: mean_k = %d, std_ratio = %.2f\n"
+          "\t - Temporal filter: history = %d, dist_thr = %.4f m, min_ratio = %.2f\n"
+          "\t - Color filter: history = %d, sat_thr = %d\n"
+          "\t - Save interval: %d s | Log interval: %d s",
+          run_savefolder_.c_str(), run_name.c_str(),
+          min_points_thr_, max_points_thr_,
+          min_voxel_size_m_, max_voxel_size_m_,
+          max_translation_m_, max_rotation_deg_, tf_history_size_,
+          dist_thr_m_, min_neighbors_,
+          mean_k_, std_ratio_,
+          cloud_history_size_, dist_thr_m_, min_appearance_ratio_,
+          color_history_size_, saturation_thr_,
+          save_interval_seconds_, log_interval_seconds_
+        );
 
       }
 
@@ -262,7 +286,6 @@ namespace point_cloud_accumulator_pkg
         const rclcpp::Time &stamp, 
         const std::string &frame_id
       ) {
-
         if (cloud.empty())
         {
           RCLCPP_WARN(this->get_logger(), "Attempted to publish an empty point cloud!");
@@ -277,7 +300,6 @@ namespace point_cloud_accumulator_pkg
 
         // Publish message.
         publisher->publish(output_msg);
-        
       }
 
       void savePointCloud()

@@ -18,16 +18,15 @@ namespace point_cloud_accumulator_pkg::io
   void Logger::setSaveFilePrefix(const std::string &folder, const std::string &run)
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    folder_ = folder;
-    run_ = run;
-		std::string run_folder = folder + "/" + run + "/"; 
-    std::filesystem::create_directories(run_folder);
+    folder_ = folder;   // e.g. ./artifacts/YMD-HMS_accum_cloud/
+    run_ = run;         // e.g. YMD-HMS_accum_cloud
+    std::filesystem::create_directories(folder);
   }
 
-  void Logger::logStep(const std::string &filter_tag, const std::string &record)
+  void Logger::logStep(const std::string &tag, const std::string &record)
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    logs_[filter_tag].push_back(record);
+    logs_[tag].push_back(record);
   }
 
   void Logger::flush()
@@ -44,9 +43,8 @@ namespace point_cloud_accumulator_pkg::io
       if (records.empty()) continue;
 
 			// Build the save destination's file path
-			std::string run_folder = folder_ + "/" + run_;
-			std::string artifact_name = run_ + "_" + tag;
-      std::string filename = run_folder + "/" + artifact_name + ".tab";
+			std::string artifact_name = run_ + "_" + tag;             // e.g. YMD-HMS_accum_cloud_tag
+      std::string filename = folder_ + artifact_name + ".tab";  // e.g. folder_/YMD-HMS_accum_cloud_tag
       std::ofstream out(filename, std::ios::app);
 
 			// [Guard Clause] :: Skip to next if output failed to open.

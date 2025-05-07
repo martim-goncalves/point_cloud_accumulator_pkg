@@ -2,7 +2,7 @@
 # Common parameters for the Point Cloud Accumulator Node
 
 ---
-/**:
+point_cloud_accumulator:
 
     ros__parameters:
 
