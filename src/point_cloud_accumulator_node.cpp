@@ -224,45 +224,60 @@ namespace point_cloud_accumulator_pkg
 
       void handlePointCloud(sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
       {
-        // Extract point cloud from ROS 2 message
-        CloudPtr cloud = std::make_shared<CloudT>();
-        pcl::fromROSMsg(*msg, *cloud);
-
-        // Skip empty input early
-        if (cloud->empty()) 
+        if (!msg)
         {
-          RCLCPP_WARN(this->get_logger(), "Received an empty input point cloud, skipping.");
+          RCLCPP_WARN(this->get_logger(), "Received null point cloud, skipping.");
           return;
         }
 
-        // Attempt to lookup transform from cloud frame to message frame
-        Eigen::Affine3f tf = Eigen::Affine3f::Identity();
-        try 
+        // Try to look up the transform from msg->header.frame_id to "map"
+        geometry_msgs::msg::TransformStamped tf_stamped;
+        try
         {
-          geometry_msgs::msg::TransformStamped tf_stamped = tf_buffer_.lookupTransform(
+          tf_stamped = tf_buffer_.lookupTransform(
             "map", 
             msg->header.frame_id, 
             msg->header.stamp, 
             tf2::durationFromSec(0.1)
           );
-          tf = tf2::transformToEigen(tf_stamped).cast<float>();
-          pipeline_->setCurrentTransform(tf);
+          Eigen::Affine3d tf_eigen = tf2::transformToEigen(tf_stamped);
+          pipeline_->setCurrentTransform(tf_eigen.cast<float>());
         } catch (const tf2::TransformException &ex) {
           RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s", ex.what());
+          return;
+        }
+
+        // Transform the input point cloud to "map" frame
+        sensor_msgs::msg::PointCloud2 cloud_msg_in_map;
+        try
+        {
+          tf2::doTransform(*msg, cloud_msg_in_map, tf_stamped);
+        } catch (const tf2::TransformException &ex) {
+          RCLCPP_WARN(this->get_logger(), "Transform application failed: %s", ex.what());
+          return;
+        }
+
+        // Convert transformed cloud to PCL
+        CloudPtr cloud = std::make_shared<CloudT>();
+        pcl::fromROSMsg(cloud_msg_in_map, *cloud);
+
+        if (cloud->empty())
+        {
+          RCLCPP_WARN(this->get_logger(), "Transformed cloud is empty, skipping.");
+          return;
         }
 
         // Ingest and filter the cloud
         CloudPtr filtered = accumulator_->ingest(cloud);
         CloudPtr accumulated = accumulator_->getAccumulatedCloud();
 
-        // Skip publishing empty frames
-        if (!filtered || filtered->empty()) 
+        if (!filtered || filtered->empty())
         {
           RCLCPP_WARN(this->get_logger(), "Filtered cloud is empty, skipping publish.");
           return;
         }
 
-        // Publish filtered and accumulated point clouds
+        // Publish filtered and accumulated clouds in the "map" frame
         publishPointCloud(frame_publisher_, *filtered, msg->header.stamp, "map");
         publishPointCloud(accumulator_publisher_, *accumulated, msg->header.stamp, "map");
       }
