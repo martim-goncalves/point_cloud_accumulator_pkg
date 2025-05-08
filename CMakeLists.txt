@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
+cmake_policy(SET CMP0074 NEW)
 project(point_cloud_accumulator_pkg)
+
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -37,6 +39,7 @@ set(SOURCES
   src/filters/statistical_outlier_filter.cpp
   src/filters/temporal_filter.cpp
   src/filters/tf_outlier_filter.cpp
+  src/filters/nan_filter.cpp
   src/io/logger.cpp
 )
 
@@ -68,6 +71,11 @@ install(DIRECTORY include/
 install(DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}/config
 )
+
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
 
 # Export package
 ament_export_include_directories(include)

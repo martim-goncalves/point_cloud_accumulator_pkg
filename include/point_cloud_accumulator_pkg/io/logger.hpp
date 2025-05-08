@@ -42,8 +42,10 @@ namespace point_cloud_accumulator_pkg::io
             }
         };
         (append_with_tab(args), ...);
-        return ss.str() + "\n";
+        return ss.str();
       }
+
+      bool isEmpty() { return logs_.empty(); }
       
       /** 
        * @brief Sets the path for the run's artifacts folder and creates it if missing.

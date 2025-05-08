@@ -38,5 +38,10 @@ This ROS 2 package is responsible for ingesting point cloud frames and accumulat
 + How to run it (i.e. snippets and such)
 
 ```bash
+colcon build --packages-select point_cloud_accumulator_pkg
+source install/setup.bash
+```
+
+```bash
 
 ```

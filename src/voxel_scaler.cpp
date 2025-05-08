@@ -23,7 +23,7 @@ namespace point_cloud_accumulator_pkg
     if (min_size > max_size)
       throw std::invalid_argument("Minimum voxel size cannot be greater than maximum voxel size.");
 
-    if (!fn)
+    if (!curve_)
       throw std::invalid_argument("The interpolation curve function must not be null.");
   }
 

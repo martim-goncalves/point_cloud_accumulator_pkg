@@ -8,7 +8,7 @@ point_cloud_accumulator:
 
         min_points_thr: 10000
         max_points_thr: 100000
-        min_voxel_size_m: 0.025
+        min_voxel_size_m: 0.01
         max_voxel_size_m: 0.1 
         savefolder: "./artifacts/"
         savefile: "accumulated_cloud"

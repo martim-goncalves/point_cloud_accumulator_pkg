@@ -6,7 +6,7 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl/io/ply_io.h>
+#include <pcl/io/pcd_io.h>
 #include <filesystem>
 
 #include "point_cloud_accumulator_pkg/curves/logistic_sigmoid.hpp"
@@ -16,6 +16,7 @@
 #include "point_cloud_accumulator_pkg/filters/temporal_filter.hpp"
 #include "point_cloud_accumulator_pkg/filters/tf_outlier_filter.hpp"
 #include "point_cloud_accumulator_pkg/filters/color_consistency_filter.hpp"
+#include "point_cloud_accumulator_pkg/filters/nan_filter.hpp"
 #include "point_cloud_accumulator_pkg/accumulator.hpp"
 #include "point_cloud_accumulator_pkg/io/logger.hpp"
 
@@ -51,7 +52,7 @@ namespace point_cloud_accumulator_pkg
         // Declare standard parameters
         this->declare_parameter<int>("min_points_thr", 1'000'000);              // Downsampling starts.
         this->declare_parameter<int>("max_points_thr", 5'000'000);              // Downsampling ends.
-        this->declare_parameter<double>("min_voxel_size_m", 0.025);             // High resolution.
+        this->declare_parameter<double>("min_voxel_size_m", 0.01);              // High resolution.
         this->declare_parameter<double>("max_voxel_size_m", 0.1);               // Low resolution.
         this->declare_parameter<std::string>("savefolder", "./artifacts/");     // Save folder path.
         this->declare_parameter<std::string>("savefile", "accumulated_cloud");  // Run name.
@@ -122,17 +123,20 @@ namespace point_cloud_accumulator_pkg
         using namespace point_cloud_accumulator_pkg::filters;
         using namespace point_cloud_accumulator_pkg::curves;
 
+        // FIXME Getting hang ups --- test accumulator without filters
+
         // Filter tags
-        std::string t1 = "tfoutlier", t2 = "spatial", t3 = "sor", t4 = "temporal", t5 = "color";
+        std::string t1 = "tfoutlier", t2 = "nan", t3 = "spatial", t4 = "sor", t5 = "temporal";
 
         // Starting filter in the pipeline
         pipeline_ = std::make_shared<TFOutlierFilter>(t1, max_translation_m_, max_rotation_deg_, tf_history_size_);
 
         // Chain filters
         pipeline_ // TF -> Spatial -> SOR -> Temporal -> Color
-          -> setNext(std::make_shared<SpatialFilter>(t2, dist_thr_m_, min_neighbors_))
-          -> setNext(std::make_shared<StatisticalOutlierFilter>(t3, mean_k_, std_ratio_))
-          -> setNext(std::make_shared<TemporalFilter>(t4, cloud_history_size_, dist_thr_m_, min_appearance_ratio_))
+          -> setNext(std::make_shared<NaNFilter>(t2))
+          -> setNext(std::make_shared<SpatialFilter>(t3, dist_thr_m_, min_neighbors_))
+          -> setNext(std::make_shared<StatisticalOutlierFilter>(t4, mean_k_, std_ratio_))
+          -> setNext(std::make_shared<TemporalFilter>(t5, cloud_history_size_, dist_thr_m_, min_appearance_ratio_))
           // -> setNext(std::make_shared<ColorConsistencyFilter>(t5, color_history_size_, saturation_thr_))
         ;
 
@@ -147,7 +151,7 @@ namespace point_cloud_accumulator_pkg
         );
 
         // Inject the filter pipeline and voxel scaler into the point cloud accumulator
-        accumulator_ = std::make_unique<Accumulator>(min_voxel_size_m_, pipeline_, scaler);
+        accumulator_ = std::make_unique<Accumulator>(min_voxel_size_m_, nullptr/*pipeline_*/, scaler);
 
         // ...
         topic_subscription_ = this->create_subscription<CloudMsg>(
@@ -172,18 +176,19 @@ namespace point_cloud_accumulator_pkg
           );
 
         // Log starting configuration
-        RCLCPP_INFO(this->get_logger(),
+        RCLCPP_INFO(
+          this->get_logger(),
           "[+] PointCloudAccumulatorNode initialized:\n"
           "\t - Run artifacts folder: %s\n"
           "\t - Run name: %s\n"
-          "\t - Min/max point threshold: %d / %d\n"
+          "\t - Min/max point threshold: %ld / %ld\n"
           "\t - Min/max voxel size: %.4f / %.4f m\n"
           "\t - TF filter: max_translation = %.2f m, max_rotation = %.2f deg, history = %d\n"
           "\t - Spatial filter: dist_thr = %.4f m, min_neighbors = %d\n"
           "\t - SOR filter: mean_k = %d, std_ratio = %.2f\n"
           "\t - Temporal filter: history = %d, dist_thr = %.4f m, min_ratio = %.2f\n"
           "\t - Color filter: history = %d, sat_thr = %d\n"
-          "\t - Save interval: %d s | Log interval: %d s",
+          "\t - Save interval: %ld s | Log interval: %ld s",
           run_savefolder_.c_str(), run_name.c_str(),
           min_points_thr_, max_points_thr_,
           min_voxel_size_m_, max_voxel_size_m_,
@@ -199,7 +204,7 @@ namespace point_cloud_accumulator_pkg
       ~PointCloudAccumulatorNode() 
       {
         RCLCPP_INFO(this->get_logger(), "Node shutting down...");
-        logRecords();
+        logRecords(); // FIXME [2.] Logging records on shutdown crashed (maybe write to file without holding things?)
         savePointCloud();
       }
 
@@ -224,11 +229,9 @@ namespace point_cloud_accumulator_pkg
         pcl::fromROSMsg(*msg, *cloud);
 
         // Skip empty input early
-        if (cloud->empty()) {
-          RCLCPP_WARN_THROTTLE(
-            this->get_logger(), *this->get_clock(), 5000, 
-            "Received an empty input point cloud, skipping."
-          );
+        if (cloud->empty()) 
+        {
+          RCLCPP_WARN(this->get_logger(), "Received an empty input point cloud, skipping.");
           return;
         }
 
@@ -245,10 +248,7 @@ namespace point_cloud_accumulator_pkg
           tf = tf2::transformToEigen(tf_stamped).cast<float>();
           pipeline_->setCurrentTransform(tf);
         } catch (const tf2::TransformException &ex) {
-          RCLCPP_WARN_THROTTLE(
-            this->get_logger(), *this->get_clock(), 5000, 
-            "TF lookup failed: %s", ex.what()
-          );
+          RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s", ex.what());
         }
 
         // Ingest and filter the cloud
@@ -258,17 +258,13 @@ namespace point_cloud_accumulator_pkg
         // Skip publishing empty frames
         if (!filtered || filtered->empty()) 
         {
-          RCLCPP_WARN_THROTTLE(
-            this->get_logger(), *this->get_clock(), 5000, 
-            "Filtered cloud is empty, skipping publish."
-          );
+          RCLCPP_WARN(this->get_logger(), "Filtered cloud is empty, skipping publish.");
           return;
         }
 
         // Publish filtered and accumulated point clouds
         publishPointCloud(frame_publisher_, *filtered, msg->header.stamp, "map");
         publishPointCloud(accumulator_publisher_, *accumulated, msg->header.stamp, "map");
-
       }
 
       /**
@@ -304,7 +300,7 @@ namespace point_cloud_accumulator_pkg
       {
         auto cloud = accumulator_->getAccumulatedCloud();
         if (!cloud || cloud->empty()) {
-          RCLCPP_WARN(this->get_logger(), "No data to save");
+          RCLCPP_WARN(this->get_logger(), "No data to save!");
           return;
         }
 
@@ -315,7 +311,7 @@ namespace point_cloud_accumulator_pkg
         std::string res_mm = std::to_string(int(min_voxel_size_m_ * 1000)) + "mm";
         std::string acc_pts = std::to_string(cloud->size()) + "pts";
 
-        std::string file_extension = ".ply";
+        std::string file_extension = ".pcd";
         size_t dot_pos = savefile_.find_last_of(".");
         if (dot_pos != std::string::npos) {
           file_extension = savefile_.substr(dot_pos);
@@ -325,7 +321,7 @@ namespace point_cloud_accumulator_pkg
         std::string final_filename = std::string(time_buf) + "_" + base_name + "_" + res_mm + "_" + acc_pts + file_extension;
         std::string final_savepath = run_savefolder_ + final_filename;
 
-        if (pcl::io::savePLYFileBinary(final_savepath, *cloud) == 0) {
+        if (pcl::io::savePCDFileBinaryCompressed(final_savepath, *cloud) == 0) {
           RCLCPP_INFO(this->get_logger(), "Saved accumulated point cloud to %s", final_savepath.c_str());
         } else {
           RCLCPP_ERROR(this->get_logger(), "Failed to save point cloud to %s", final_savepath.c_str());
@@ -334,7 +330,13 @@ namespace point_cloud_accumulator_pkg
 
       void logRecords()
       {
-        io::Logger::get().flush();
+        auto& logger = io::Logger::get();
+        if (logger.isEmpty())
+        {
+          RCLCPP_WARN(this->get_logger(), "No records to log!");
+          return;
+        }
+        logger.flush();
         RCLCPP_INFO(this->get_logger(), "Saved run logs to disk.");
       }
 

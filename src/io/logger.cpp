@@ -53,7 +53,7 @@ namespace point_cloud_accumulator_pkg::io
 			// Append each line to the output file.
       for (const auto &record : records)
       {
-        out << record;
+        out << record << '\n';
       }
 
 			// Clear the lines from the Logger.
