@@ -1,5 +1,6 @@
 #include "point_cloud_accumulator_pkg/filters/statistical_outlier_filter.hpp"
 #include "point_cloud_accumulator_pkg/io/logger.hpp"
+#include "point_cloud_accumulator_pkg/io/stop_watch.hpp"
 
 namespace point_cloud_accumulator_pkg::filters
 {
@@ -20,13 +21,8 @@ namespace point_cloud_accumulator_pkg::filters
   
   CloudPtr StatisticalOutlierFilter::applyFilter(const CloudPtr &cloud) const
   {
-
     // Set initial timestamp
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-    char time_buf[100];
-    std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now_c));
-    std::string timestamp = time_buf;
+    io::StopWatch::get().setStart();
 
     // [Guard Clause] :: Skip processing empty clouds
     if (cloud->empty())
@@ -40,23 +36,18 @@ namespace point_cloud_accumulator_pkg::filters
     sor.setStddevMulThresh(std_ratio_);
     sor.filter(*filtered);
 
-    // Get elapsed time in milliseconds
-    auto duration = now.time_since_epoch();
-    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-
     // Build record for the current step
     auto& logger = io::Logger::get();
     logger.logStep(tag_, logger.makeRecord(
-      timestamp,                          //
-      millis,                             //
-      filtered->size(),                   // Points kept
-      cloud->size() - filtered->size(),   // Points filtered
-      mean_k_,                            // 
-      std_ratio_                          // 
+      io::StopWatch::get().getTimestamp(),
+      io::StopWatch::get().getElapsedMicros(),
+      filtered->size(),
+      cloud->size() - filtered->size(),
+      mean_k_, 
+      std_ratio_
     ));
 
     return filtered;
-
   }
 
 } // namespace point_cloud_accumulator_pkg::filters

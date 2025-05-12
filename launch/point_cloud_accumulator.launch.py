@@ -20,7 +20,9 @@ def generate_launch_description():
             output='screen',
             parameters=[config],
             remappings=[
-                ('/cloud_in', '/zed/zed_node/point_cloud/cloud_registered')
+                ('/cloud_in', '/zed/zed_node/point_cloud/cloud_registered'),
+                ('/camera/pose', '/zed/zed_node/pose_confidence'),
+                ('/camera/loop_closure_event', '/zed/zed_node/loop_closure_detection_status')
             ]
         )
     ])

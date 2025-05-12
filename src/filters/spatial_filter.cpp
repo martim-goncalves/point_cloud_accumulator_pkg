@@ -4,6 +4,7 @@
 
 #include "point_cloud_accumulator_pkg/filters/spatial_filter.hpp"
 #include "point_cloud_accumulator_pkg/io/logger.hpp"
+#include "point_cloud_accumulator_pkg/io/stop_watch.hpp"
 
 namespace point_cloud_accumulator_pkg::filters
 {
@@ -24,15 +25,15 @@ namespace point_cloud_accumulator_pkg::filters
 
   CloudPtr SpatialFilter::applyFilter(const CloudPtr &cloud) const
   {
+    // Set initial timestamp.
+    io::StopWatch::get().setStart();
 
-    // Set initial timestamp
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-    char time_buf[100];
-    std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now_c));
-    std::string timestamp = time_buf;
-
+    // Create an empty filtered cloud
     CloudPtr filtered = std::make_shared<CloudT>();
+
+    if (!cloud || cloud->empty())
+      return filtered;
+
     pcl::KdTreeFLANN<PointT> kdtree;
     kdtree.setInputCloud(cloud);
 
@@ -49,10 +50,6 @@ namespace point_cloud_accumulator_pkg::filters
     filtered->height = 1;
     filtered->is_dense = true;
 
-    // Get elapsed time in milliseconds
-    auto duration = now.time_since_epoch();
-    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-
     // ...
     auto distances = nearestNeighborDistances(cloud);
     auto [mean_dist, std_dist] = distanceStats(distances);
@@ -60,18 +57,17 @@ namespace point_cloud_accumulator_pkg::filters
     // Build record for the current step
     auto& logger = io::Logger::get();
     logger.logStep(tag_, logger.makeRecord(
-      timestamp,                          //
-      millis,                             //
-      filtered->size(),                   // Points kept
-      cloud->size() - filtered->size(),   // Points filtered
-      mean_dist,                          // Mean distance between points
-      std_dist,                           // Mean distance standard deviation
-      distance_thr_m_,                    // 
-      min_neighbors_                      // 
+      io::StopWatch::get().getTimestamp(),      // YMD-HMS
+      io::StopWatch::get().getElapsedMicros(), 
+      filtered->size(),                         // Points kept
+      cloud->size() - filtered->size(),         // Points filtered
+      mean_dist,                                // Mean distance between points
+      std_dist,                                 // Mean distance standard deviation
+      distance_thr_m_, 
+      min_neighbors_ 
     ));
 
     return filtered;
-
   }
 
   std::vector<float> SpatialFilter::nearestNeighborDistances(const CloudPtr &cloud, int k) const

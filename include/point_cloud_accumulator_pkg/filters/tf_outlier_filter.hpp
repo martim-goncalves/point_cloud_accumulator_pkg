@@ -24,6 +24,7 @@ namespace point_cloud_accumulator_pkg::filters
 
     private:
       bool isValid(const Eigen::Affine3f &tf) const;
+      Eigen::Quaternionf averageQuaternions(const std::vector<Eigen::Quaternionf> &quats) const;
       double getRotationAngleDeg(const Eigen::Matrix3f &a, const Eigen::Matrix3f &b) const;
 
       mutable std::deque<Eigen::Affine3f> tf_history_; // Standard library containers have automatic memory management

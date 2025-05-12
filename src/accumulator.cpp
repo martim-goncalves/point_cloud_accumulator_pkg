@@ -11,20 +11,21 @@ namespace point_cloud_accumulator_pkg
     , pipeline_(std::move(pipeline))
     , scaler_(std::move(scaler))
   {
-
     accumulated_cloud_ = std::make_shared<CloudT>();
-
   }
 
   CloudPtr Accumulator::ingest(const CloudPtr &cloud)
   {
-
     // Protect against silliness.
     if (!cloud)
       throw std::invalid_argument("Input cloud must not be null.");
 
     // Apply input filter pipeline to ingested frame if available.
     auto filtered_frame = (pipeline_) ? pipeline_->apply(cloud) : cloud;
+
+    // Protect against empty clouds.
+    if (!filtered_frame || filtered_frame->empty())
+      return std::make_shared<CloudT>();
 
     // Accumulate and downsample the cloud.
     *accumulated_cloud_ += *filtered_frame;

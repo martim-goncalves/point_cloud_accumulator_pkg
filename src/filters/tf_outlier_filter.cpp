@@ -1,5 +1,6 @@
 #include "point_cloud_accumulator_pkg/filters/tf_outlier_filter.hpp"
 #include "point_cloud_accumulator_pkg/io/logger.hpp"
+#include "point_cloud_accumulator_pkg/io/stop_watch.hpp"
 
 namespace point_cloud_accumulator_pkg::filters
 {
@@ -31,34 +32,26 @@ namespace point_cloud_accumulator_pkg::filters
 
   CloudPtr TFOutlierFilter::applyFilter(const CloudPtr &cloud) const
   {
+    // Set initial timestamp.
+    io::StopWatch::get().setStart();
 
-    // Set initial timestamp
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-    char time_buf[100];
-    std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now_c));
-    std::string timestamp = time_buf;
+    // Guard against silliness.
+    if (!has_tf_) return cloud;
 
+    // Keep single exit point from here onwards.
     CloudPtr result = std::make_shared<CloudT>();
 
-    if (!has_tf_)
-      return cloud;
-
-    bool is_valid = isValid(current_tf_);
-
-    if (is_valid)
+    // Push the current transform into the double sided queue and pop the oldest.
+    if (tf_history_.size() >= history_size_)
     {
-      if (tf_history_.size() >= history_size_)
-        tf_history_.pop_front();
-      tf_history_.push_back(current_tf_);
-      result = cloud;
-    } else {
-      result = nullptr;
+      tf_history_.pop_front();
     }
-
-    // Get elapsed time in milliseconds
-    auto duration = now.time_since_epoch();
-    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+    tf_history_.push_back(current_tf_);
+    
+    // Check transform validity.
+    bool is_valid = isValid(current_tf_);
+    if (is_valid)
+      result = cloud;
 
     // Compute translation and rotation
     Eigen::Vector3f translation = current_tf_.translation();
@@ -67,22 +60,21 @@ namespace point_cloud_accumulator_pkg::filters
     // Build record for the current step
     auto& logger = io::Logger::get();
     logger.logStep(tag_, logger.makeRecord(
-      timestamp,                    // Timestamp (ms since epoch)
-      millis,                       // Elapsed time 
-      translation.x(),              // tx
-      translation.y(),              // ty
-      translation.z(),              // tz
-      rotation.x() * 180.0 / M_PI,  // Roll (x) in degrees
-      rotation.y() * 180.0 / M_PI,  // Pitch (y) in degrees
-      rotation.z() * 180.0 / M_PI,  // Yaw (z) in degrees
-      !is_valid ? 1 : 0,            // outlier
-      max_translation_m_,           // max_translation_m
-      max_rotation_deg_,            // max_rotation_deg
+      io::StopWatch::get().getTimestamp(),            // YMD-HMS
+      io::StopWatch::get().getElapsedMicros(),  
+      translation.x(),                                // tx
+      translation.y(),                                // ty
+      translation.z(),                                // tz
+      rotation.x() * 180.0 / M_PI,                    // Roll (x) in degrees
+      rotation.y() * 180.0 / M_PI,                    // Pitch (y) in degrees
+      rotation.z() * 180.0 / M_PI,                    // Yaw (z) in degrees
+      !is_valid ? 1 : 0,                              // outlier
+      max_translation_m_,                             // max_translation_m
+      max_rotation_deg_,                              // max_rotation_deg
       history_size_ 
     ));
 
     return result;
-  
   }
 
   /**
@@ -92,20 +84,46 @@ namespace point_cloud_accumulator_pkg::filters
    */
   bool TFOutlierFilter::isValid(const Eigen::Affine3f &tf) const
   {
+    // Assume first TF is good
+    if (tf_history_.empty()) return true;
 
-    if (tf_history_.empty())
-      return true;
+    // Compute mean of history
+    Eigen::Vector3f mean_translation = Eigen::Vector3f::Zero();
+    Eigen::Quaternionf mean_quat;
+    std::vector<Eigen::Quaternionf> quats;
+    for (const auto &tf : tf_history_) {
+      mean_translation += tf.translation();
+      quats.emplace_back(Eigen::Quaternionf(tf.rotation()));
+    }
+    mean_translation /= static_cast<float>(tf_history_.size());
+    mean_quat = averageQuaternions(quats);
+    
+    // Compare current to mean (translation)
+    float translation_mag = (tf.translation() - mean_translation).norm();
 
-    const Eigen::Affine3f &last_tf = tf_history_.back();
-    Eigen::Vector3f translation_diff = tf.translation() - last_tf.translation();
-    double translation_mag = translation_diff.norm();
+    // Compare current to mean (rotation)
+    Eigen::Quaternionf current_quat(tf.rotation());
+    float rotation_angle_rad = mean_quat.angularDistance(current_quat);
+    float rotation_angle_deg = rotation_angle_rad * 180.0 / M_PI;
 
-    double angle_deg = getRotationAngleDeg(tf.rotation(), last_tf.rotation());
-
-    return translation_mag <= max_translation_m_ && angle_deg <= max_rotation_deg_;
-  
+    return translation_mag <= max_translation_m_ && rotation_angle_deg <= max_rotation_deg_;
   }
 
+  Eigen::Quaternionf TFOutlierFilter::averageQuaternions(const std::vector<Eigen::Quaternionf>& quats) const
+  {
+    Eigen::Matrix4f A = Eigen::Matrix4f::Zero();
+    for (const auto &q : quats) {
+      Eigen::Vector4f vec(q.w(), q.x(), q.y(), q.z());
+      A += vec * vec.transpose();
+    }
+    A /= quats.size();
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix4f> solver(A);
+    Eigen::Vector4f avg = solver.eigenvectors().col(3); // largest eigenvalue
+    return Eigen::Quaternionf(avg(0), avg(1), avg(2), avg(3)).normalized();
+  }
+
+  
+  // [TODO] | (Unused) :: Evaluate removal
   double TFOutlierFilter::getRotationAngleDeg(const Eigen::Matrix3f &a, const Eigen::Matrix3f &b) const
   {
     Eigen::Matrix3f delta = a.transpose() * b;

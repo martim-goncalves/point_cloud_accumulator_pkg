@@ -24,6 +24,8 @@ namespace point_cloud_accumulator_pkg::io
        */
       static Logger &get();
 
+      void setEnabled(bool enabled);
+
       /** 
        * @brief Generic function using templates and variadic templates to return a tab-separated string.
        * @param args Column values to build the record with.
@@ -44,8 +46,6 @@ namespace point_cloud_accumulator_pkg::io
         (append_with_tab(args), ...);
         return ss.str();
       }
-
-      bool isEmpty() { return logs_.empty(); }
       
       /** 
        * @brief Sets the path for the run's artifacts folder and creates it if missing.
@@ -55,17 +55,11 @@ namespace point_cloud_accumulator_pkg::io
       void setSaveFilePrefix(const std::string &folder, const std::string &run);
 
       /**
-       * @brief Adds a record to the logs dictionary, identified by its destination file's tag as a key.
-       * @param tag Key respective to the origin and destination of the lines.
+       * @brief Logs a processing step as a record to a file identified by its orign tag.
+       * @param tag Tag representing the source or origin of the record being logged.
        * @param record Record to append to the logs.
        */
       void logStep(const std::string &tag, const std::string &record);
-      
-      /**
-       * @brief Flushes all of the logs to their respective log files. Logs are written to files under the run folder, 
-       *        sharing the same name suffixed with the tag and `.tab` extension.
-       */
-      void flush();
 
     private:
       Logger();
@@ -85,10 +79,10 @@ namespace point_cloud_accumulator_pkg::io
       std::string folder_; 
       /** Name of the folder where artifacts (e.g. maps, logs, etc.) for a run are kept. */
       std::string run_;
-      /** Log lines separated by tag. */
-      std::unordered_map<std::string, std::vector<std::string>> logs_;
       /** ... */
       std::mutex mutex_;
+      /** ... */
+      bool enabled_;
 
   };
 
