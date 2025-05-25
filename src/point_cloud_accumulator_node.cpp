@@ -135,7 +135,7 @@ namespace point_cloud_accumulator_pkg
         pipeline_ = std::make_shared<TFOutlierFilter>(t1, max_translation_m_, max_rotation_deg_, tf_history_size_);
         pipeline_
           -> setNext(std::make_shared<NaNFilter>(t2))
-          -> setNext(std::make_shared<SpatialFilter>(t3, dist_thr_m_, min_neighbors_))
+          // -> setNext(std::make_shared<SpatialFilter>(t3, dist_thr_m_, min_neighbors_))
           -> setNext(std::make_shared<StatisticalOutlierFilter>(t4, mean_k_, std_ratio_))
           // -> setNext(std::make_shared<TemporalFilter>(t5, cloud_history_size_, dist_thr_m_, min_appearance_ratio_))
           // -> setNext(std::make_shared<ColorConsistencyFilter>(t5, color_history_size_, saturation_thr_))
