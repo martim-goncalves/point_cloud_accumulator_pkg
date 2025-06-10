@@ -187,9 +187,9 @@ namespace point_cloud_accumulator_pkg
           );
 
         // General logging header
-        logger.logStep("general", logger.makeRecord(
-          "timestamp", "pose_confidence", "is_loop_closure", "cloud_size", "voxel_size_m"
-        ));
+        logger.logStep("general",
+          "timestamp", "elapsed", "pose_confidence", "is_loop_closure", "cloud_size", "voxel_size_m"
+        );
 
         // Log starting configuration
         RCLCPP_INFO(
@@ -245,6 +245,10 @@ namespace point_cloud_accumulator_pkg
 
       void handlePointCloud(sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
       {
+        // Set initial timestamp
+        auto& stopwatch = io::StopWatch::get();
+        auto [start, t0] = stopwatch.now();
+
         if (!msg)
         {
           RCLCPP_WARN(this->get_logger(), "Received null point cloud, skipping.");
@@ -303,14 +307,15 @@ namespace point_cloud_accumulator_pkg
         publishPointCloud(accumulator_publisher_, *accumulated, msg->header.stamp, "map");
 
         // Log record
-        auto& logger = io::Logger::get();
-        logger.logStep("general", logger.makeRecord(
-          this->now().seconds(),
+        auto [end, t] = stopwatch.now();
+        io::Logger::get().logStep("general",
+          stopwatch.getTimestamp(t0),
+          stopwatch.getElapsedMicros(start, end),
           std::to_string(static_cast<int>(current_pose_confidence_.load())),
           is_loop_closure_.load() ? 1 : 0,
           accumulated->size(), 
           accumulator_->getVoxelSize()
-        ));
+        );
       }
 
       /**
