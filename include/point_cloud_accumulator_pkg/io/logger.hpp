@@ -7,6 +7,7 @@
 #include <mutex>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <stdexcept>
 #include <type_traits>
 
