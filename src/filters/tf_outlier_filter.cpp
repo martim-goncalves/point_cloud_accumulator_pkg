@@ -16,12 +16,11 @@ namespace point_cloud_accumulator_pkg::filters
     , history_size_(history_size)
   {
     // Build header for the logs
-    auto& logger = io::Logger::get();
-    logger.logStep(tag, logger.makeRecord(
+    io::Logger::get().logStep(tag,
       "timestamp", "elapsed",                                 // Time
       "tx", "ty", "tz", "rx", "ry", "rz", "outlier",          // Information (translation, rotation, is outlier)
       "max_translation_m", "max_rotation_m", "history_size"   // Params
-    ));
+    );
   }
 
   void TFOutlierFilter::setCurrentTransform(const Eigen::Affine3f &tf)
@@ -33,7 +32,8 @@ namespace point_cloud_accumulator_pkg::filters
   CloudPtr TFOutlierFilter::applyFilter(const CloudPtr &cloud) const
   {
     // Set initial timestamp.
-    io::StopWatch::get().setStart();
+    auto& stopwatch = io::StopWatch::get();
+    auto [start, t0] = stopwatch.now();
 
     // Guard against silliness.
     if (!has_tf_) return cloud;
@@ -58,21 +58,22 @@ namespace point_cloud_accumulator_pkg::filters
     Eigen::Vector3f rotation = current_tf_.rotation().eulerAngles(0, 1, 2); 
 
     // Build record for the current step
+    auto [end, t] = stopwatch.now();
     auto& logger = io::Logger::get();
-    logger.logStep(tag_, logger.makeRecord(
-      io::StopWatch::get().getTimestamp(),            // YMD-HMS
-      io::StopWatch::get().getElapsedMicros(),  
-      translation.x(),                                // tx
-      translation.y(),                                // ty
-      translation.z(),                                // tz
-      rotation.x() * 180.0 / M_PI,                    // Roll (x) in degrees
-      rotation.y() * 180.0 / M_PI,                    // Pitch (y) in degrees
-      rotation.z() * 180.0 / M_PI,                    // Yaw (z) in degrees
-      !is_valid ? 1 : 0,                              // outlier
-      max_translation_m_,                             // max_translation_m
-      max_rotation_deg_,                              // max_rotation_deg
+    logger.logStep(tag_,
+      stopwatch.getTimestamp(t0),
+      stopwatch.getElapsedMicros(start, end),  
+      translation.x(),                          // tx
+      translation.y(),                          // ty
+      translation.z(),                          // tz
+      rotation.x() * 180.0 / M_PI,              // Roll (x) in degrees
+      rotation.y() * 180.0 / M_PI,              // Pitch (y) in degrees
+      rotation.z() * 180.0 / M_PI,              // Yaw (z) in degrees
+      !is_valid ? 1 : 0,                        // outlier
+      max_translation_m_,                       // max_translation_m
+      max_rotation_deg_,                        // max_rotation_deg
       history_size_ 
-    ));
+    );
 
     return result;
   }

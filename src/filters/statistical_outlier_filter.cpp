@@ -11,18 +11,18 @@ namespace point_cloud_accumulator_pkg::filters
     , std_ratio_(std_ratio) 
   {
     // Build header for the logs
-    auto& logger = io::Logger::get();
-    logger.logStep(tag, logger.makeRecord(
+    io::Logger::get().logStep(tag,
       "timestamp", "elapsed",       // Time
       "pts_kept", "pts_filtered",   // Information
       "mean_k", "std_ratio"         // Params
-    ));
+    );
   }
   
   CloudPtr StatisticalOutlierFilter::applyFilter(const CloudPtr &cloud) const
   {
     // Set initial timestamp
-    io::StopWatch::get().setStart();
+    auto& stopwatch = io::StopWatch::get();
+    auto [start, t0] = stopwatch.now();
 
     // [Guard Clause] :: Skip processing empty clouds
     if (cloud->empty())
@@ -37,15 +37,15 @@ namespace point_cloud_accumulator_pkg::filters
     sor.filter(*filtered);
 
     // Build record for the current step
-    auto& logger = io::Logger::get();
-    logger.logStep(tag_, logger.makeRecord(
-      io::StopWatch::get().getTimestamp(),
-      io::StopWatch::get().getElapsedMicros(),
+    auto [end, t] = stopwatch.now();
+    io::Logger::get().logStep(tag_,
+      stopwatch.getTimestamp(t0),
+      stopwatch.getElapsedMicros(start, end),
       filtered->size(),
       cloud->size() - filtered->size(),
       mean_k_, 
       std_ratio_
-    ));
+    );
 
     return filtered;
   }

@@ -2,6 +2,7 @@
 
 #include "point_cloud_accumulator_pkg/filters/temporal_filter.hpp"
 #include "point_cloud_accumulator_pkg/io/logger.hpp"
+#include "point_cloud_accumulator_pkg/io/stop_watch.hpp"
 
 namespace point_cloud_accumulator_pkg::filters
 {
@@ -17,23 +18,18 @@ namespace point_cloud_accumulator_pkg::filters
     , min_appearance_ratio_(min_appearance_ratio)
   {
     // Build header for the logs
-    auto& logger = io::Logger::get();
-    logger.logStep(tag, logger.makeRecord(
+    io::Logger::get().logStep(tag,
       "timestamp", "elapsed",                                   // Time
       "pts_kept", "pts_filtered",                               // Information
       "distance_thr_m", "min_appearance_ratio", "history_size"  // Params
-    ));
+    );
   }
 
   CloudPtr TemporalFilter::applyFilter(const CloudPtr &cloud) const
   {
-
     // Set initial timestamp
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-    char time_buf[100];
-    std::strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now_c));
-    std::string timestamp = time_buf;
+    auto& stopwatch = io::StopWatch::get();
+    auto [start, t0] = stopwatch.now();
 
     // [Guard Clause] :: Skip processing empty clouds
     if (cloud->empty())
@@ -61,24 +57,19 @@ namespace point_cloud_accumulator_pkg::filters
     stable_cloud->height = 1;
     stable_cloud->is_dense = false;
 
-    // Get elapsed time in milliseconds
-    auto duration = now.time_since_epoch();
-    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-
     // Build record for the current step
-    auto& logger = io::Logger::get();
-    logger.logStep(tag_, logger.makeRecord(
-      timestamp,                              //
-      millis,                                 //
-      stable_cloud->size(),                   // Points kept
-      cloud->size() - stable_cloud->size(),   // Points filtered
-      distance_thr_m_,                        // 
-      min_appearance_ratio_,                  // 
-      history_size_                           // 
-    ));
+    auto [end, t] = stopwatch.now();
+    io::Logger::get().logStep(tag_,
+      stopwatch.getTimestamp(t0), 
+      stopwatch.getElapsedMicros(start, end),
+      stable_cloud->size(),                     // Points kept
+      cloud->size() - stable_cloud->size(),     // Points filtered
+      distance_thr_m_,                          
+      min_appearance_ratio_,                    
+      history_size_                             
+    );
 
     return stable_cloud;
-
   }
 
   void TemporalFilter::setDistanceThreshold(float distance_thr) 
@@ -88,7 +79,6 @@ namespace point_cloud_accumulator_pkg::filters
 
   bool TemporalFilter::isPointStable(const PointT& pt) const
   {
-
     int appearances = 0;
 
     for (const auto &past_cloud : frame_history_)
@@ -105,7 +95,6 @@ namespace point_cloud_accumulator_pkg::filters
 
     float ratio = static_cast<float>(appearances) / frame_history_.size();
     return ratio >= min_appearance_ratio_;
-
   }
 
 } // namespace point_cloud_accumulator_pkg::filters

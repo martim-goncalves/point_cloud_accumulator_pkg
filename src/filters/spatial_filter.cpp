@@ -15,18 +15,18 @@ namespace point_cloud_accumulator_pkg::filters
     , min_neighbors_(min_neighbors)
   {
     // Build header for the logs
-    auto& logger = io::Logger::get();
-    logger.logStep(tag, logger.makeRecord(
+    io::Logger::get().logStep(tag,
       "timestamp", "elapsed",                           // Time
       "pts_kept", "pts_filtered", "mean_dist", "std",   // Information
       "dist_thr_m", "min_neighbors"                     // Params
-    ));
+    );
   }
 
   CloudPtr SpatialFilter::applyFilter(const CloudPtr &cloud) const
   {
-    // Set initial timestamp.
-    io::StopWatch::get().setStart();
+    // Set initial timestamp
+    auto& stopwatch = io::StopWatch::get();
+    auto [start, t0] = stopwatch.now();
 
     // Create an empty filtered cloud
     CloudPtr filtered = std::make_shared<CloudT>();
@@ -55,17 +55,17 @@ namespace point_cloud_accumulator_pkg::filters
     auto [mean_dist, std_dist] = distanceStats(distances);
 
     // Build record for the current step
-    auto& logger = io::Logger::get();
-    logger.logStep(tag_, logger.makeRecord(
-      io::StopWatch::get().getTimestamp(),      // YMD-HMS
-      io::StopWatch::get().getElapsedMicros(), 
+    auto [end, t] = stopwatch.now();
+    io::Logger::get().logStep(tag_,
+      stopwatch.getTimestamp(t0),               // YMD-HMS
+      stopwatch.getElapsedMicros(start, end),   
       filtered->size(),                         // Points kept
       cloud->size() - filtered->size(),         // Points filtered
       mean_dist,                                // Mean distance between points
       std_dist,                                 // Mean distance standard deviation
       distance_thr_m_, 
       min_neighbors_ 
-    ));
+    );
 
     return filtered;
   }
