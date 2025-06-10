@@ -40,8 +40,6 @@ set(SOURCES
   src/filters/temporal_filter.cpp
   src/filters/tf_outlier_filter.cpp
   src/filters/nan_filter.cpp
-  src/io/logger.cpp
-  src/io/stop_watch.cpp
 )
 
 # Executable
