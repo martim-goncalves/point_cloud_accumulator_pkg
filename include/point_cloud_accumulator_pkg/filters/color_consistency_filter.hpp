@@ -8,6 +8,19 @@
 namespace point_cloud_accumulator_pkg::filters
 {
 
+  /**
+   * Plan for color normalization:
+   * - VoxelGrid for downsampling
+   * - ColorNormalizationFilter
+   * 
+   * Using a VoxelGrid for normalization has the benefit of placing each point at known locations. By applying it to 
+   * each point cloud frame and then comparing it to the mean and standard deviation values we may be able to pull 
+   * normalization off.
+   * 
+   * The VoxelGrid's resolution should be greater than any of the final maps, be it the fused cloud or the octomap. 
+   * The ColorNormalizationFilter should keep a data structure similar to the accumulated cloud where for each XYZ 
+   * there are mean RGB values and their standard deviation for each point.
+   */
   class ColorConsistencyFilter : public Filter
   {
     public:
