@@ -19,6 +19,7 @@
 #include "point_cloud_accumulator_pkg/filters/tf_outlier_filter.hpp"
 #include "point_cloud_accumulator_pkg/filters/color_consistency_filter.hpp"
 #include "point_cloud_accumulator_pkg/filters/nan_filter.hpp"
+#include "point_cloud_accumulator_pkg/filters/temporal_stability_filter.hpp"
 #include "point_cloud_accumulator_pkg/accumulator.hpp"
 #include "point_cloud_accumulator_pkg/io/logger.hpp"
 #include "point_cloud_accumulator_pkg/io/stop_watch.hpp"
@@ -135,6 +136,7 @@ namespace point_cloud_accumulator_pkg
         pipeline_ = std::make_shared<TFOutlierFilter>(t1, max_translation_m_, max_rotation_deg_, tf_history_size_);
         pipeline_
           -> setNext(std::make_shared<NaNFilter>(t2))
+          -> setNext(std::make_shared<TemporalStabilityFilter>(0.01, 5))
           // -> setNext(std::make_shared<SpatialFilter>(t3, dist_thr_m_, min_neighbors_))
           -> setNext(std::make_shared<StatisticalOutlierFilter>(t4, mean_k_, std_ratio_))
           // -> setNext(std::make_shared<TemporalFilter>(t5, cloud_history_size_, dist_thr_m_, min_appearance_ratio_))
