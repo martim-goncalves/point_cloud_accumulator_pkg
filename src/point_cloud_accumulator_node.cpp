@@ -136,7 +136,7 @@ namespace point_cloud_accumulator_pkg
         pipeline_ = std::make_shared<TFOutlierFilter>(t1, max_translation_m_, max_rotation_deg_, tf_history_size_);
         pipeline_
           -> setNext(std::make_shared<NaNFilter>(t2))
-          -> setNext(std::make_shared<TemporalStabilityFilter>(0.01, 5))
+          // -> setNext(std::make_shared<TemporalStabilityFilter>(0.01, 5))
           // -> setNext(std::make_shared<SpatialFilter>(t3, dist_thr_m_, min_neighbors_))
           -> setNext(std::make_shared<StatisticalOutlierFilter>(t4, mean_k_, std_ratio_))
           // -> setNext(std::make_shared<TemporalFilter>(t5, cloud_history_size_, dist_thr_m_, min_appearance_ratio_))
@@ -251,6 +251,22 @@ namespace point_cloud_accumulator_pkg
         auto& stopwatch = io::StopWatch::get();
         auto [start, t0] = stopwatch.now();
 
+        // HACK: Temporary lambda to log first point RGB values for debugging 
+        // auto log_first_point_rgb = [&](const CloudPtr &c, const std::string &tag) {
+        //   if (!c || c->empty()) {
+        //     RCLCPP_INFO(get_logger(), "[%s] Cloud empty", tag.c_str());
+        //     return;
+        //   }
+        //   const auto &p = c->points[0];
+        //   RCLCPP_INFO(get_logger(), "[%s] pts=%zu first rgb=(r=%u,g=%u,b=%u) packed_rgb=%f",
+        //     tag.c_str(), c->size(),
+        //     static_cast<unsigned>(p.r),
+        //     static_cast<unsigned>(p.g),
+        //     static_cast<unsigned>(p.b),
+        //     p.rgb
+        //   );
+        // };
+
         if (!msg)
         {
           RCLCPP_WARN(this->get_logger(), "Received null point cloud, skipping.");
@@ -293,6 +309,7 @@ namespace point_cloud_accumulator_pkg
           RCLCPP_INFO(this->get_logger(), "Transformed cloud is empty, skipping.");
           return;
         }
+        // log_first_point_rgb(cloud, "input");
 
         // Ingest and filter the cloud
         CloudPtr filtered = accumulator_->ingest(cloud);
@@ -303,6 +320,8 @@ namespace point_cloud_accumulator_pkg
           RCLCPP_INFO(this->get_logger(), "Filtered cloud is empty, skipping publish.");
           return;
         }
+        // log_first_point_rgb(filtered, "filtered");
+        // log_first_point_rgb(accumulated, "accumulated");
 
         // Publish filtered and accumulated clouds in the "map" frame
         publishPointCloud(frame_publisher_, *filtered, msg->header.stamp, "map");
